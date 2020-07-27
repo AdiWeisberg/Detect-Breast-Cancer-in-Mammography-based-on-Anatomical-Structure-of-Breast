@@ -6,14 +6,24 @@ import shutil
 import PIL # optional
 # make it True if you want in PNG format
 PNG = False
-# Specify the .dcm folder path
-folder_path = "Mass_Test"
-result_path = "Mass_Test_combined"
+# Specify the .dcm folder path with 3 sub folders:
+folder_path = "path\\to\\folder\\with\\dsm\\files\\into\\folders"
+# Specify the output folder
+result_path = "creats\\new\\path\\to\\store\\the\\results"
+images_path = os.listdir(folder_path)
+#input validation check:
+for n, image_name in enumerate(sorted(images_path)):
+    sub1 = os.listdir(folder_path + "\\" + image_name)
+    sub2 = os.listdir(folder_path + "\\" + image_name + "\\" + sub1[0])
+    full_path = os.path.join(folder_path, image_name, sub1[0], sub2[0])
+    files_in_folder = os.listdir(full_path)
+    if(len(files_in_folder) != 2):
+        raise Exception('there is not png image in directory: {} '.format(full_path))
+print("The input is valid!")
 # Specify the output jpg/png folder path
-png_folder_path = "Mass_Test"
+#png_folder_path = "E:\\temp_boobs"
 os.makedirs(result_path+"\\"+'Tagged')
 os.makedirs(result_path+"\\"+'Source')
-images_path = os.listdir(folder_path)
 for n, image_name in enumerate(sorted(images_path)):
     sub1 = os.listdir(folder_path+"\\"+image_name)
     sub2 = os.listdir(folder_path+"\\"+image_name+"\\"+sub1[0])
