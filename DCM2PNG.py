@@ -21,7 +21,6 @@ for n, image_name in enumerate(sorted(images_path)):
         raise Exception('there is not png image in directory: {} '.format(full_path))
 print("The input is valid!")
 # Specify the output jpg/png folder path
-#png_folder_path = "E:\\temp_boobs"
 os.makedirs(result_path+"\\"+'Tagged')
 os.makedirs(result_path+"\\"+'Source')
 for n, image_name in enumerate(sorted(images_path)):
