@@ -1,8 +1,11 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy import ndimage
+
 import find_borders
 import math
+import imutils
 
 """
 1. finding width of the coordinaite:
@@ -101,26 +104,66 @@ and then calculate for each array its AVG.
 def calculate_Lengths_and_widths_avg():
     pass
 
+"""
+3. Image rotation
+"""
+def angle_calc(line):
+    m1, b = line
+    m2 = 1
+    return math.degrees(math.atan(np.absolute((m2 - m1)/(1+m2*m1))))
+
+def rotate_bound(image, angle):
+    # grab the dimensions of the image and then determine the
+    # center
+    cv2.namedWindow('output2', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('output2', 600, 600)
+    cv2.imshow("output2", image)
+    cv2.waitKey(0)
+    (h, w) = image.shape[:2]
+    (cX, cY) = (w // 2, h // 2)
+    # grab the rotation matrix (applying the negative of the
+    # angle to rotate clockwise), then grab the sine and cosine
+    # (i.e., the rotation components of the matrix)
+    M = cv2.getRotationMatrix2D((cX, cY), -angle, 0)
+    cos = np.abs(M[0, 0])
+    sin = np.abs(M[0, 1])
+    # compute the new bounding dimensions of the image
+    nW = int((h * sin) + (w * cos))
+    nH = int((h * cos) + (w * sin))
+    # adjust the rotation matrix to take into account translation
+    M[0, 2] += (nW / 2) - cX
+    M[1, 2] += (nH / 2) - cY
+    # perform the actual rotation and return the image
+    #cv2.warpAffine(image, M, (nW, nH))
+    cv2.namedWindow('output3', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('output3', 600, 600)
+    cv2.imshow("output3", cv2.warpAffine(image, M, (nW, nH)))
+    cv2.waitKey(0)
+
 
 # Read an image
 image = cv2.imread("1-1.png")
 line_detected = np.copy(image)
 top_line, buttom_line = find_borders.findLine(image)
 cv2.line(line_detected, top_line, buttom_line, (208, 216, 75), 15)  # draw and show line between 2 points that we found
-cv2.namedWindow('line_detected', cv2.WINDOW_NORMAL)
-cv2.resizeWindow('line_detected', 600, 600)
-cv2.imshow('line_detected', line_detected)
-cv2.waitKey()
-cv2.destroyAllWindows()
 output, circle, center_point = find_borders.fineCircle(image)
 print(circle)
-cv2.namedWindow('output1', cv2.WINDOW_NORMAL)
-cv2.resizeWindow('output1', 600, 600)
-cv2.imshow("output1", output)
-cv2.waitKey(0)
+
+
 
 #################################
 eq_line_length = Finding_Equation_Line(top_line, buttom_line)
 normal = Finding_Normal(eq_line_length)
 eq_line_width = Finding_Equation_Line_By_Slope_And_Point(normal)
 intercept_width_length = Find_intercept_width_length(eq_line_length, eq_line_width)
+
+angle = angle_calc(eq_line_length)
+print("angle = ", angle)
+rotated = ndimage.rotate(image, angle)
+#rotate_bound(image, angle)
+
+# view images:
+cv2.namedWindow('output1', cv2.WINDOW_NORMAL)
+cv2.resizeWindow('output1', 600, 600)
+cv2.imshow("output1", rotated)
+cv2.waitKey(0)
