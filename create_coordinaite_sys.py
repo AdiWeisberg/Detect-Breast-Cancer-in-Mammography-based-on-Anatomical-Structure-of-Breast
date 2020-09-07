@@ -114,30 +114,41 @@ def angle_calc(line):
    # return math.degrees(math.atan(np.absolute((m2 - m1)/(1+m2*m1))))
     return 90+math.degrees(math.atan(m1))
 
-def rotate(image, angle ,top_line , center = None, scale = 1.0):
+def rotate(image, angle, center=None, scale=1.0):
+    # Stage 1 - rotation the image by the angle.
+
     (h, w) = image.shape[:2]
+
 
     if center is None:
         center = (w / 2, h / 2)
 
-    # Perform the rotation
-    M = cv2.getRotationMatrix2D((0,0), angle, scale) # or center in the first parameter
-    rotated = cv2.warpAffine(image, M, (w, h))
+    # Perform the rotation from center
+    # M = cv2.getRotationMatrix2D(center, angle, scale)
 
+    # for rotate from (0,0)
 
-    # Calculate Distance to shift:
+    #M = cv2.getRotationMatrix2D((0, 0), angle, scale)  # or center in the first parameter
+    #rotated = cv2.warpAffine(image, M, (w, h))
+
+    rotated = imutils.rotate_bound(image, -angle)  # think to be a better option then the ndimage.rotate
+    #rotated = ndimage.rotate(image, angle)
+
+    # Stage 2 - Calculate Distance to shift:
     x, y = top_line
     print("x, y : ", x, y)
-    new_point = find_new_dot(x, y, angle, center)
+    new_point = find_new_dot(x, y, angle, [0, 0])
     x_new, y_new = new_point
     print("x_new, y_new : ", x_new, y_new)
     cv2.circle(rotated, (int(x_new), int(y_new)), radius=10, color=(0, 0, 255), thickness=10)
-    # Stage2 - shift left
-    #num_rows, num_cols = rotated.shape[:2]
-    #translation_matrix = np.float32([[1, 0, -150], [0, 1, 0]])
-    #img_translation = cv2.warpAffine(rotated, translation_matrix, ((num_cols, num_rows)))
 
-    return rotated
+    # Stage 3 - shift the image to the left:
+
+    num_rows, num_cols = rotated.shape[:2]
+    translation_matrix = np.float32([[1, 0, -x_new+10], [0, 1, 0]])
+    img_translation = cv2.warpAffine(rotated, translation_matrix, ((num_cols, num_rows)))
+    return img_translation
+
 
 
 def find_new_dot(x, y, angle, center):
@@ -155,7 +166,8 @@ def find_new_dot(x, y, angle, center):
 
 
 # Read an image
-image = cv2.imread("1-1.png")
+image = cv2.imread("1-2.png")
+print("shapes: ", image.shape[:2])
 line_detected = np.copy(image)
 top_line, buttom_line = find_borders.findLine(image)
 cv2.line(line_detected, top_line, buttom_line, (208, 216, 75), 15)  # draw and show line between 2 points that we found
