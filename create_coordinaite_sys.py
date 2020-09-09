@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import ndimage
-import find_borders, find_countor
+import find_borders, find_countor, RANSAC
 import math
 import imutils
 
@@ -32,6 +32,7 @@ def remove_white_frame(image, top_point):
         for j in range(w):
             image[i][j] = 0
 
+
     # view images:
     cv2.namedWindow('output1', cv2.WINDOW_NORMAL)
     cv2.resizeWindow('output1', 600, 600)
@@ -60,21 +61,6 @@ def Finding_Equation_Line(point1, point2):
     plt.plot(point1, m * point1 + b)
     plt.show()
     return line_length
-
-
-# finding the normal of the muscle line for the nipple line.
-# find the the slope of the line of the muscale(m1) and then calculate the normal:
-# m2 = -1 / m1.
-# return the normal number.
-def Finding_Normal(line, point1=[1, 2]): # remember to change the point1 .
-    x = np.array(point1)
-    m, b = line
-    m_normal = -1 / m
-    print(m_normal)
-    plt.plot(x, m_normal * x + b)
-    plt.show()
-    return m_normal
-
 
 # for the nipple line:
 # circle - get the circle ( the circle taf of the nipple )
@@ -116,34 +102,17 @@ def Find_Width(point1, point2):
 2. finding Length
 """
 
-
-# we have all the point on the breast countor by the code in- find_countor and we will find the parabola by
-# Three or more central points as far apart as possible.
-# return parabola equation
-# TODO BY NAOMI
-def Finding_Prabola_By_Countor():
-    pass
-
-
-# by Intersection Point betweeen Parabola and LineMuscle
-# return two point -first and last on the muscle.
-# TODO BY: NAOMI
-def Finding_Inter_Point_Between_Parabola_LineMuscle(Parabola, LineMuscle):
-    pass
-
-
 # TODO BY: NAOMI
 # return the length of the full muscla line.
-def Finding_Length(pointFirst, pointlast):
-    pass
-
+def Finding_Length(poly_breast):
+    poly_top, poly_bottom = poly_breast
+    return (poly_bottom - poly_top)
 
 """
 3. run on all the images:
 big for that run on all the images and calculate the length and the width and store them in  two arrays.
 and then calculate for each array its AVG.
 """
-
 
 def calculate_Lengths_and_widths_avg():
     pass
@@ -182,46 +151,32 @@ def rotate(image, angle, top_point):
 4. Compute polygon
 """
 
-def ransac_polyfit(countors, order=3, n=20, k=100, t=0.1, d=100, f=0.8):
-    # Thanks https://en.wikipedia.org/wiki/Random_sample_consensus
-
-    # n – minimum number of data points required to fit the model
-    # k – maximum number of iterations allowed in the algorithm
-    # t – threshold value to determine when a data point fits a model
-    # d – number of close data points required to assert that a model fits well to data
-    # f – fraction of close data points required
-
+def ransac_polyfit(countors, center_point):
+    cx, cy, r = center_point
     # unzip to x and y arrays:
-    arr_x = np.array([])
-    arr_y = np.array([])
+    bottom_arr_x = np.array([])
+    bottom_arr_y = np.array([])
+    top_arr_x = np.array([])
+    top_arr_y = np.array([])
     for a in countors:
         for b in a:
-            # print(" b is : ", b[0])
-            arr_x = np.append(arr_x, b[0][0])
-            arr_y = np.append(arr_y, b[0][1])
-    print(" arr_x : ", arr_x)
-    print("len(arr_x) -> ", len(arr_x))
-    print("len(arr_y) -> ", len(arr_y))
-    besterr = np.inf
-    bestfit = 0.0
-    for kk in range(k):
-        maybeinliers = np.random.randint(len(arr_x), size=n)
-        maybemodel = np.polyfit(arr_x[maybeinliers], arr_y[maybeinliers], order)
-        alsoinliers = np.abs(np.polyval(maybemodel, arr_x) - arr_y) < t
-        if sum(alsoinliers) > d and sum(alsoinliers) > len(arr_x) * f:
-            bettermodel = np.polyfit(arr_x[alsoinliers], arr_y[alsoinliers], order)
-            thiserr = np.sum(np.abs(np.polyval(bettermodel, arr_x[alsoinliers]) - arr_y[alsoinliers]))
-            if thiserr < besterr:
-                bestfit = bettermodel
-                besterr = thiserr
-    poly = np.poly1d(bestfit)
-    new_x = np.linspace(arr_x[0], arr_x[-1])
-    new_y = poly(new_x)
-    plt.plot(arr_x, new_y, "o", new_x, new_y)
-    plt.xlim([arr_x[0] - 1, arr_x[-1] + 1])
-    plt.savefig("line.jpg")
+            if b[0][1] <= cy:
+                top_arr_x = np.append(top_arr_x, b[0][0])
+                top_arr_y = np.append(top_arr_y, b[0][1])
+            else:
+                bottom_arr_x = np.append(bottom_arr_x, b[0][0])
+                bottom_arr_y = np.append(bottom_arr_y, b[0][1])
 
-    return bestfit
+    print(" top_arr_x ", len(top_arr_x))
+    print(" top_arr_y ", len(top_arr_y))
+
+    print("TOP1")
+    coeff_top = RANSAC.quadratic_ransac_curve_fit(top_arr_x, top_arr_y)
+    print("BOTTOM1")
+    coeff_bottom = RANSAC.quadratic_ransac_curve_fit(bottom_arr_x, bottom_arr_y)
+
+    return coeff_top, coeff_bottom
+
 
 
 def find_new_dot(x, y, angle):
@@ -232,19 +187,17 @@ def find_new_dot(x, y, angle):
 
 def main():
     # Read an image
-    image = cv2.imread("9.png")
+    image = cv2.imread("1-7.png")
     print("shapes: ", image.shape[:2])
 
     # Find line of muscle and nipple
     top_point, buttom_point = find_borders.findLine(image)
-    output, circle, center_point = find_borders.findCircle(image)
 
     # Delete white frame
     image = remove_white_frame(image, top_point)
 
-
     # draw and show line between 2 points that we found
-    line_detected = np.copy(image)
+    #line_detected = np.copy(image)
     #cv2.line(line_detected, top_point, buttom_point, (208, 216, 75), 15)
 
     # Find Equation line and angle for rotation
@@ -255,14 +208,10 @@ def main():
         rotated = rotate(image, angle, top_point)
         image = rotated
 
-    # RANSAC:
-    # image_copy = np.copy(image)
-    # countors, edgeImage = find_countor.getEdgeImage(image_copy)
-    # poly_breast = ransac_polyfit(countors)
-
-    normal = Finding_Normal(eq_line_muscle)
-    eq_line_width = Finding_Equation_Line_By_Slope_And_Point(normal, center_point)
-    intercept_width_length = Find_intercept_width_length(eq_line_muscle, eq_line_width)
+    # Find nipple
+    circle, nipple_point = find_borders.findCircle(image)
+    x_new, y_new, r = nipple_point
+    cv2.circle(image, (int(x_new), int(y_new)), radius=30, color=(0, 0, 255), thickness=20)
 
     # view images:
     cv2.namedWindow('output1', cv2.WINDOW_NORMAL)
@@ -270,6 +219,17 @@ def main():
     cv2.imshow("output1", image)
     cv2.waitKey(0)
 
+    # RANSAC:
+    countors = find_countor.getEdgeImage(image)
+    poly_breast = ransac_polyfit(countors, nipple_point)
+    print(type(poly_breast[0]))
+    # calculate new length of muscle:
+    muscle_length = Finding_Length(poly_breast)
+
+    # calculate width:
+    width_length = nipple_point[0]
+    width_equation = np.array(nipple_point[1])
+    width_iter_muscle = (0, nipple_point[1]) # The intercetion point between the muscle line to the width line.
 
 
 if __name__ == '__main__':
