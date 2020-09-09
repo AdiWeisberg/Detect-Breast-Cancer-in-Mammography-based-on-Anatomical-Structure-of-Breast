@@ -6,6 +6,38 @@ import find_borders, find_countor
 import math
 import imutils
 
+
+"""
+0. Delete white frame:
+"""
+
+def remove_white_frame(image, top_point):
+    h, w = image.shape[:2]
+    # from bottom:
+    for i in range(h-150, h):
+        for j in range(w):
+            image[i][j] = 0
+
+    # from left:
+    for i in range(h):
+        for j in range(30):
+            image[i][j] = 0
+
+    # from top:
+    if top_point[1] > 80:
+        h_limit = top_point[1]
+    else:
+        h_limit = 80
+    for i in range(h_limit):
+        for j in range(w):
+            image[i][j] = 0
+
+    # view images:
+    cv2.namedWindow('output1', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('output1', 600, 600)
+    cv2.imshow("output1", image)
+    cv2.waitKey(0)
+    return image
 """
 1. finding width of the coordinate:
 """
@@ -128,12 +160,12 @@ def angle_calc(line):
     return 90 + math.degrees(math.atan(m1))
 
 
-def rotate(image, angle, top_line):
+def rotate(image, angle, top_point):
     # Stage 1 - rotation the image by the angle.
     rotated = imutils.rotate_bound(image, -angle)  # think to be a better option then the ndimage.rotate
 
     # Stage 2 - Calculate Distance to shift:
-    x, y = top_line
+    x, y = top_point
     new_point = find_new_dot(x, y, angle)
     x_new, y_new = new_point
     cv2.circle(rotated, (int(x_new), int(y_new)), radius=10, color=(0, 0, 255), thickness=10)
@@ -143,6 +175,8 @@ def rotate(image, angle, top_line):
     translation_matrix = np.float32([[1, 0, -x_new], [0, 1, 0]])
     img_translation = cv2.warpAffine(rotated, translation_matrix, ((num_cols, num_rows)))
     return img_translation
+
+
 
 """
 4. Compute polygon
@@ -168,7 +202,6 @@ def ransac_polyfit(countors, order=3, n=20, k=100, t=0.1, d=100, f=0.8):
     print(" arr_x : ", arr_x)
     print("len(arr_x) -> ", len(arr_x))
     print("len(arr_y) -> ", len(arr_y))
-
     besterr = np.inf
     bestfit = 0.0
     for kk in range(k):
@@ -199,21 +232,27 @@ def find_new_dot(x, y, angle):
 
 def main():
     # Read an image
-    image = cv2.imread("1-2.png")
+    image = cv2.imread("9.png")
     print("shapes: ", image.shape[:2])
-    top_line, buttom_line = find_borders.findLine(image)
+
+    # Find line of muscle and nipple
+    top_point, buttom_point = find_borders.findLine(image)
     output, circle, center_point = find_borders.findCircle(image)
+
+    # Delete white frame
+    image = remove_white_frame(image, top_point)
+
 
     # draw and show line between 2 points that we found
     line_detected = np.copy(image)
-    #cv2.line(line_detected, top_line, buttom_line, (208, 216, 75), 15)
+    #cv2.line(line_detected, top_point, buttom_point, (208, 216, 75), 15)
 
     # Find Equation line and angle for rotation
-    eq_line_muscle = Finding_Equation_Line(top_line, buttom_line)
+    eq_line_muscle = Finding_Equation_Line(top_point, buttom_point)
     angle = angle_calc(eq_line_muscle)
     print("angle = ", angle)
     if angle < 90:
-        rotated = rotate(image, angle, top_line)
+        rotated = rotate(image, angle, top_point)
         image = rotated
 
     # RANSAC:
@@ -230,6 +269,8 @@ def main():
     cv2.resizeWindow('output1', 600, 600)
     cv2.imshow("output1", image)
     cv2.waitKey(0)
+
+
 
 if __name__ == '__main__':
     main()
