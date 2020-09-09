@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import ndimage
-import find_borders
+import find_borders, find_countor
 import math
 import imutils
 
@@ -49,7 +49,7 @@ def Finding_Normal(line, point1=[1, 2]): # remember to change the point1 .
 # slope - the number we get from the function "finding normal" that calculates the slope
 # y-y1 = m2(x-x1)
 # return line
-def Finding_Equation_Line_By_Slope_And_Point(slope):
+def Finding_Equation_Line_By_Slope_And_Point(slope, center_point):
     x, y, r = center_point
     m = slope
     b = y - slope * x
@@ -121,7 +121,6 @@ def calculate_Lengths_and_widths_avg():
 3. Image rotation
 """
 
-
 def angle_calc(line):
     m1, b = line
     # m2 = 1
@@ -129,82 +128,108 @@ def angle_calc(line):
     return 90 + math.degrees(math.atan(m1))
 
 
-def rotate(image, angle, center=None, scale=1.0):
+def rotate(image, angle, top_line):
     # Stage 1 - rotation the image by the angle.
-
-    (h, w) = image.shape[:2]
-
-    if center is None:
-        center = (w / 2, h / 2)
-
-    # Perform the rotation from center
-    # M = cv2.getRotationMatrix2D(center, angle, scale)
-
-    # for rotate from (0,0)
-
-    # M = cv2.getRotationMatrix2D((0, 0), angle, scale)  # or center in the first parameter
-    # rotated = cv2.warpAffine(image, M, (w, h))
-
     rotated = imutils.rotate_bound(image, -angle)  # think to be a better option then the ndimage.rotate
-    # rotated = ndimage.rotate(image, angle)
 
     # Stage 2 - Calculate Distance to shift:
     x, y = top_line
-    print("x, y : ", x, y)
-    new_point = find_new_dot(x, y, angle, [0, 0])
+    new_point = find_new_dot(x, y, angle)
     x_new, y_new = new_point
-    print("x_new, y_new : ", x_new, y_new)
     cv2.circle(rotated, (int(x_new), int(y_new)), radius=10, color=(0, 0, 255), thickness=10)
 
     # Stage 3 - shift the image to the left:
-
     num_rows, num_cols = rotated.shape[:2]
-    translation_matrix = np.float32([[1, 0, -x_new + 10], [0, 1, 0]])
+    translation_matrix = np.float32([[1, 0, -x_new], [0, 1, 0]])
     img_translation = cv2.warpAffine(rotated, translation_matrix, ((num_cols, num_rows)))
     return img_translation
 
+"""
+4. Compute polygon
+"""
 
-def find_new_dot(x, y, angle, center):
-    # angle = np.deg2rad(angle)
-    # R = np.array([[np.cos(angle), -np.sin(angle)],
-    #              [np.sin(angle), np.cos(angle)]])
-    # o = np.atleast_2d(center)
-    # p = np.atleast_2d((x, y))
-    # return np.squeeze((R @ (p.T - o.T) + o.T).T)
+def ransac_polyfit(countors, order=3, n=20, k=100, t=0.1, d=100, f=0.8):
+    # Thanks https://en.wikipedia.org/wiki/Random_sample_consensus
+
+    # n – minimum number of data points required to fit the model
+    # k – maximum number of iterations allowed in the algorithm
+    # t – threshold value to determine when a data point fits a model
+    # d – number of close data points required to assert that a model fits well to data
+    # f – fraction of close data points required
+
+    # unzip to x and y arrays:
+    arr_x = np.array([])
+    arr_y = np.array([])
+    for a in countors:
+        for b in a:
+            # print(" b is : ", b[0])
+            arr_x = np.append(arr_x, b[0][0])
+            arr_y = np.append(arr_y, b[0][1])
+    print(" arr_x : ", arr_x)
+    print("len(arr_x) -> ", len(arr_x))
+    print("len(arr_y) -> ", len(arr_y))
+
+    besterr = np.inf
+    bestfit = 0.0
+    for kk in range(k):
+        maybeinliers = np.random.randint(len(arr_x), size=n)
+        maybemodel = np.polyfit(arr_x[maybeinliers], arr_y[maybeinliers], order)
+        alsoinliers = np.abs(np.polyval(maybemodel, arr_x) - arr_y) < t
+        if sum(alsoinliers) > d and sum(alsoinliers) > len(arr_x) * f:
+            bettermodel = np.polyfit(arr_x[alsoinliers], arr_y[alsoinliers], order)
+            thiserr = np.sum(np.abs(np.polyval(bettermodel, arr_x[alsoinliers]) - arr_y[alsoinliers]))
+            if thiserr < besterr:
+                bestfit = bettermodel
+                besterr = thiserr
+    poly = np.poly1d(bestfit)
+    new_x = np.linspace(arr_x[0], arr_x[-1])
+    new_y = poly(new_x)
+    plt.plot(arr_x, new_y, "o", new_x, new_y)
+    plt.xlim([arr_x[0] - 1, arr_x[-1] + 1])
+    plt.savefig("line.jpg")
+
+    return bestfit
+
+
+def find_new_dot(x, y, angle):
     angle_rad = math.radians(angle)
-    x_center, y_center = center
     x_new = x * np.cos(angle_rad) - y * np.sin(angle_rad)
     y_new = x * np.sin(angle_rad) + y * np.cos(angle_rad)
     return (x_new, y_new)
 
+def main():
+    # Read an image
+    image = cv2.imread("1-2.png")
+    print("shapes: ", image.shape[:2])
+    top_line, buttom_line = find_borders.findLine(image)
+    output, circle, center_point = find_borders.findCircle(image)
 
-# Read an image
-image = cv2.imread("1-2.png")
-print("shapes: ", image.shape[:2])
-line_detected = np.copy(image)
-top_line, buttom_line = find_borders.findLine(image)
-cv2.line(line_detected, top_line, buttom_line, (208, 216, 75), 15)  # draw and show line between 2 points that we found
-output, circle, center_point = find_borders.fineCircle(image)
-print(circle)
+    # draw and show line between 2 points that we found
+    line_detected = np.copy(image)
+    #cv2.line(line_detected, top_line, buttom_line, (208, 216, 75), 15)
 
-#################################
-eq_line_muscle = Finding_Equation_Line(top_line, buttom_line)
-normal = Finding_Normal(eq_line_muscle)
-eq_line_width = Finding_Equation_Line_By_Slope_And_Point(normal)
-intercept_width_length = Find_intercept_width_length(eq_line_muscle, eq_line_width)
+    # Find Equation line and angle for rotation
+    eq_line_muscle = Finding_Equation_Line(top_line, buttom_line)
+    angle = angle_calc(eq_line_muscle)
+    print("angle = ", angle)
+    if angle < 90:
+        rotated = rotate(image, angle, top_line)
+        image = rotated
 
-angle_1 = angle_calc(eq_line_muscle)
+    # RANSAC:
+    # image_copy = np.copy(image)
+    # countors, edgeImage = find_countor.getEdgeImage(image_copy)
+    # poly_breast = ransac_polyfit(countors)
 
-print("angle = ", angle_1)
+    normal = Finding_Normal(eq_line_muscle)
+    eq_line_width = Finding_Equation_Line_By_Slope_And_Point(normal, center_point)
+    intercept_width_length = Find_intercept_width_length(eq_line_muscle, eq_line_width)
 
-rotated = rotate(image, angle_1, top_line)
-# rotated = imutils.rotate(image, angle=angle_1)#The picture seems to be distorted
+    # view images:
+    cv2.namedWindow('output1', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('output1', 600, 600)
+    cv2.imshow("output1", image)
+    cv2.waitKey(0)
 
-# rotated = ndimage.rotate(image, 180+angle) - with rotate function
-# rotate_bound(image, angle)
-
-# view images:
-cv2.namedWindow('output1', cv2.WINDOW_NORMAL)
-cv2.resizeWindow('output1', 600, 600)
-cv2.imshow("output1", rotated)
-cv2.waitKey(0)
+if __name__ == '__main__':
+    main()
