@@ -72,5 +72,5 @@ def findCircle(image):
     x_avg = x_sum / len(circles)
     y_avg = y_sum / len(circles)
     r_avg = r_sum / len(circles)
-    return circles, (x_avg, y_avg, r_avg)
+    return circles, (x_avg, y_avg)
 
