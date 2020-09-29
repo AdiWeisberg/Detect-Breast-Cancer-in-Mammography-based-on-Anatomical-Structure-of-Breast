@@ -13,25 +13,22 @@ import torch.optim as optim
 from torch.optim import lr_scheduler
 from torchvision import datasets, models, transforms
 
-#from __future__ import print_function, division
+# from __future__ import print_function, division
 
 """
 resnet50 on CBIS-DDSM database:
 This is an attempt to track performance in the article -
  https://www.mdpi.com/2313-433X/5/3/37/pdf
 
-
-atract--
-https://www.youtube.com/watch?v=yr9tQnlkDQw
 """
 
-
+#Image augmentation - to avoid overfitting.
 transform_imgs = {
     'train': transforms.Compose([
         transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406],[0.229,0.224,0.225])
+        transforms.Normalize([0.485, 0.456, 0.406],[0.229,0.224,0.225]) # to rgb images,the secend list is to standard deviation
     ]),
     'val': transforms.Compose([
         transforms.Resize(256),
@@ -40,13 +37,13 @@ transform_imgs = {
         transforms.Normalize([0.485,0.456,0.406],[0.229,0.224, 0.225])
     ]),
 }
-
+# connect to the data directory
 data_dir = 'test_data'
-
+#two dictionary, one to train and val and second is to cancer and not cancer
 img_data = {x: datasets.ImageFolder(os.path.join(data_dir, x),
                                     transform_imgs[x])
             for x in ['train','val']}
-
+#make batch
 dataloaders = {x: torch.utils.data.DataLoader(img_data[x], batch_size=4,
                                               shuffle=True,
                                               num_workers=4)
@@ -55,7 +52,7 @@ dataloaders = {x: torch.utils.data.DataLoader(img_data[x], batch_size=4,
 data_size = {x: len(img_data[x]) for x in ['train','val']}
 
 class_names = img_data['train'].classes
-
+# run on the gpu
 device = torch.device("cuda:0" if torch.cuda.is_available()
                       else "cpu")
 
@@ -86,36 +83,43 @@ def train_model(model, loss_fn, optimizer, scheduler, num_epochs =25):
     since = time.time()
 
     best_model_wts = copy.deepcopy(model.state_dict())
+    #create a copy of the pretrained model weights
+    # and keep updating as training goes on
     best_acc = 0.0
 
-    for epoch in range(num_epochs):
+    for epoch in range(num_epochs): # for number of epochs
         print('Epoch {}/{}'.format(epoch, num_epochs -1))
         print('-' * 10)
 
+        #Each epoch has a training and validation phase
         for phase in ['train','val']:
             if phase == 'train':
                 scheduler.step()
-                model.train()
+                model.train()#set model to training mode
             else:
-                model.eval()
+                model.eval()#set model to evalate mode
 
             running_loss = 0.0
             running_corrects = 0
 
+            #iterate over data
             for inputs, outputs in dataloaders[phase]:
                 inputs = inputs.to(device)
                 outputs = outputs.to(device)
 
-                optimizer.zero_grad()
+                optimizer.zero_grad() #zero the parameter gradients
 
+                #forward
+                #track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
-                    probabilities = model(inputs)
+                    probabilities = model(inputs) #Get the probabilities for set of images
 
-                    _, predictions = torch.max(probabilities,1)
+                    _, predictions = torch.max(probabilities,1)# Get the prediction for each batch image based on the maximun probability.
+
                     loss = loss_fn(probabilities,outputs)
 
 
-                    if phase == 'train':
+                    if phase == 'train':#backward and update paramaters of model
                         loss.backward()
 
                         optimizer.step()
@@ -127,6 +131,7 @@ def train_model(model, loss_fn, optimizer, scheduler, num_epochs =25):
 
                     print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
 
+                    #update the model weights if model validation accuracy is better than before
                     if phase == 'val' and epoch_acc > best_acc:
                         best_acc = epoch_acc
                         best_model_wts = copy.deepcopy(model.state_dict())
@@ -142,6 +147,7 @@ def train_model(model, loss_fn, optimizer, scheduler, num_epochs =25):
             return model
 
 if __name__ == "__main__":
+    #to show the images we add to the model
     # inputs, output = next(iter(dataloaders['train']))
     # out = torchvision.utils.make_grid(inputs)
     #
@@ -150,7 +156,7 @@ if __name__ == "__main__":
     # output.data.numpy()
 
 
-    """lol"""
+    """connect the resnet50 model of pytorch with new train with the new images"""
 
     model_fun = models.resnet50(pretrained=True)
 
@@ -171,4 +177,6 @@ if __name__ == "__main__":
 
     #Decay Learning rate of optimizer by a factor of 0.1 every 7 epochs
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+
+    #call to the function of the train with the resnet model
     model = train_model(model_fun, loss_fn, optimizer, exp_lr_scheduler, num_epochs=20)
