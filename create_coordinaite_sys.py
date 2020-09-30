@@ -243,8 +243,8 @@ def find_new_dot(x, y, angle, center):
 
 def main():
     # Read tagged and source images:
-    tagged = cv2.imread("Mass-Test_P_00358_RIGHT_MLO_tagged.png")
-    source = cv2.imread("Mass-Test_P_00358_RIGHT_MLO.png")
+    tagged = cv2.imread("images\\Mass-Test_P_00358_RIGHT_MLO_tagged.png")
+    source = cv2.imread("images\\Mass-Test_P_00358_RIGHT_MLO.png")
 
     h, w = tagged.shape[:2]
     print("h, w start = ", h, w)
