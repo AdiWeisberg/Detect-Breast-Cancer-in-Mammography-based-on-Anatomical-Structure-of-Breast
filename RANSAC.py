@@ -18,9 +18,11 @@ def quadratic_ransac_curve_fit(title, x, y):
     x1 = x.reshape((-1, 1))
     y1 = y.reshape((-1, 1))
 
-    xi = np.linspace(min(x), max(x), 1000).reshape((-1, 1))
+    xi = np.linspace(min(x), max(x), 500).reshape((-1, 1))
 
-    poly_2 = PolynomialFeatures(degree=5)
+    # poly_2 = PolynomialFeatures(degree=5)
+    poly_2 = PolynomialFeatures(degree=2)
+
     x_2 = poly_2.fit_transform(x1)
     xi_2 = poly_2.fit_transform(xi)
 
@@ -30,7 +32,9 @@ def quadratic_ransac_curve_fit(title, x, y):
     coeff = reg.estimator_.coef_
     print(" coeff = ", coeff)
     intercept = reg.estimator_.intercept_[0]
-    coeff = np.array([intercept, coeff[0, 1], coeff[0, 2], coeff[0, 3], coeff[0, 4], coeff[0, 5]])
+    # coeff = np.array([intercept, coeff[0, 1], coeff[0, 2], coeff[0, 3], coeff[0, 4], coeff[0, 5]])
+    coeff = np.array([intercept, coeff[0, 1], coeff[0, 2]])
+
 
     inliers = reg.inlier_mask_
     outliers = np.logical_not(inliers)
@@ -43,7 +47,9 @@ def quadratic_ransac_curve_fit(title, x, y):
     plt.ylabel('y')
     plt.title('Quadratic')
     plt.show()
-    print('Equation: {0:.20f} + {1:.20f}x + {2:.20f}x^2 + {3:.20f}x^3 + {4:.20f}x^4 + {5:.20f}x^5'.format(coeff[0], coeff[1], coeff[2], coeff[3], coeff[4], coeff[5]))
+    # print('Equation: {0:.20f} + {1:.20f}x + {2:.20f}x^2 + {3:.20f}x^3 + {4:.20f}x^4 + {5:.20f}x^5'.format(coeff[0], coeff[1], coeff[2], coeff[3], coeff[4], coeff[5]))
+    print('Equation: {0:.5f} + {1:.5f}x + {2:.5f}x^2'.format(coeff[0], coeff[1], coeff[2]))
+
     print('Y-intercept: {}'.format(coeff[0]))
     plt.savefig(title+'.png')
     return coeff
@@ -80,3 +86,4 @@ def cubic_ransac_curve_fit(x, y):
     print('Equation: {0:.5f} + {1:.5f}x + {2:.5f}x^2 + {3:.5f}x^3'.format(coeff[0], coeff[1], coeff[2], coeff[3]))
     print('Y-intercept: {}'.format(coeff[0]))
     return coeff
+
