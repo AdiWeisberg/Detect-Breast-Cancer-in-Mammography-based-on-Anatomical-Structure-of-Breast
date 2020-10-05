@@ -3,6 +3,9 @@ import os
 import cv2
 import shutil
 import random
+from random import shuffle
+from math import floor
+
 
 ctrain_path = "E:\\TCIA_Breast_Test\\Calc-Training"
 mtrain_path = "E:\\TCIA_Breast_Test\\Mass-Training\\CBIS-DDSM"
@@ -22,17 +25,17 @@ os.makedirs(result_path + "\\" + "Test" + "\\" +"Mass")
 os.makedirs(result_path + "\\" + "Test" + "\\" +"Calc")
 os.makedirs(result_path + "\\" + "Val" + "\\" +"Calc")
 os.makedirs(result_path + "\\" + "Val" + "\\" +"Mass")
-# TODO: Ramdomly Sampling from Test (flag1)
-# precent2val = 30
-# validation = []
+
+#for split the train to 70,30 for the val:
+train_mass = result_path + "\\" + "Train" + "\\" +"Mass"
+train_calc = result_path + "\\" + "Train" + "\\" +"Calc"
+val_mass = result_path + "\\" + "Val" + "\\" +"Mass"
+val_calc = result_path + "\\" + "Val" + "\\" +"Calc"
 
 for folder_name, path, flag1, flag2 in path_list:
     all_images = os.listdir(path)
     print("path_images = ", all_images)
-    # TODO: Ramdomly Sampling from Test (flag1)
-    # if flag1 == "Test":
-    #     precent = (len(all_images) * 15)/100
-    #     validation += random.sample(all_images, frac=precent)
+
     for n, image_name in enumerate(sorted(all_images)):
         print(folder_name, image_name)
         sub1 = os.listdir(path + "\\" + image_name)
@@ -56,12 +59,30 @@ for folder_name, path, flag1, flag2 in path_list:
                 png_old_location = full_path + "\\" + "1-1.png"
                 shutil.move(png_old_location, png_new_location)
 
-# TODO: Ramdomly Sampling from Test (flag1)
-#print(" length of validation = ". len(validation))
 
 
-# Delete all contents of a directory using shutil.rmtree() and  handle exceptions - to delete the original folder.
-# try:
-#    shutil.rmtree(folder_path)
-# except:
-#    print('Error while deleting directory')
+def get_file_list_from_dir(datadir):
+    all_files = os.listdir(os.path.abspath(datadir))
+    data_files = list(filter(lambda file: file.endswith('.png'), all_files))
+    return data_files
+
+#split the data from train to val:
+
+mass_train_list = get_file_list_from_dir(train_mass)#list of all the images of mass train
+calc_train_list = get_file_list_from_dir(train_calc)#list of all the images of calc train
+len_mass = floor(mass_train_list.__len__()*0.3)
+
+len_calc = floor(calc_train_list.__len__()*0.3)
+
+i = 0
+for im in mass_train_list:
+    if i <= len_mass:
+        i=i+1
+        shutil.move(train_mass + "\\"+im, val_mass + "\\"+im)
+i = 0
+for im in calc_train_list:
+    if i <= len_calc:
+        i = i + 1
+        shutil.move(train_calc + "\\" + im, val_calc + "\\" + im)
+
+
