@@ -305,6 +305,42 @@ def find_new_dot(x, y, angle, center):
     y_new = -(x - cX) * np.sin(angle_rad) + (y - cY) * np.cos(angle_rad) + cY
     return (x_new, y_new)
 
+# TODO: (Priority = 1) checks what come first from the tuple in the list. w or h.
+# the function calculates the avg of the length and  width of the breast
+def avg_calc(size_breast_list):
+    widths = 0
+    lengths = 0
+
+    for i in size_breast_list:
+        width, length = i
+        widths += width
+        lengths += length
+
+    avg = widths / length(size_breast_list), lengths / length(size_breast_list)
+    return avg
+
+
+# TODO: (Priority = 1) לבדוק אם זה נכון שהפרפורציה של השד משתנה בהתאם לזה שמשנים את הגודל של התמונה כך או לעשות דרך אחרת!
+# calculation of the new size of the image :
+# new_y = ( y_image * avg_y_breast ) / y_breast
+# new_x = ( x_image * avg_x_breast ) / x_breast
+def new_coordinates(size_breast_list, image, image_name, avg):
+    avg_w, avg_h = avg
+    width_b, height_b = size_breast_list[image_name]
+    (h_image, w_image) = image.shape[:2]
+
+    # calc the new size of image by knowing the avg.
+    new_h = (h_image * avg_h) / height_b
+    new_w = (w_image * avg_w) / width_b
+    dim = (new_w, new_h)
+
+    resized = cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
+    cv2.imshow("resized_image", resized)
+    cv2.waitKey(0)
+
+    # to save iamge ?
+    # or to return it?
+
 
 def main():
     # Read tagged and source images:
