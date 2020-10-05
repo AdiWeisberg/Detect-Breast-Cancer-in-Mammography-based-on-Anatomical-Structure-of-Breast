@@ -36,26 +36,33 @@ transform_imgs = {
         transforms.ToTensor(),
         transforms.Normalize([0.485,0.456,0.406],[0.229,0.224, 0.225])
     ]),
+    'test': transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485,0.456,0.406],[0.229,0.224, 0.225])
+    ]),
+
 }
+
 # connect to the data directory
-data_dir = 'test_data'
+data_dir = 'test_data'#############################################################################training and val
 #two dictionary, one to train and val and second is to cancer and not cancer
 img_data = {x: datasets.ImageFolder(os.path.join(data_dir, x),
                                     transform_imgs[x])
-            for x in ['train','val']}
+            for x in ['train', 'val','test']}
 #make batch
-dataloaders = {x: torch.utils.data.DataLoader(img_data[x], batch_size=4,
+dataloaders = {x: torch.utils.data.DataLoader(img_data[x], batch_size=32,
                                               shuffle=True,
                                               num_workers=4)
-               for x in ['train', 'val']}
+               for x in ['train', 'val','test']}
 
-data_size = {x: len(img_data[x]) for x in ['train','val']}
+data_size = {x: len(img_data[x]) for x in ['train','val','test']}
 
 class_names = img_data['train'].classes
 # run on the gpu
 device = torch.device("cuda:0" if torch.cuda.is_available()
                       else "cpu")
-
 
 
 def imshow(inp, title=None):
@@ -146,6 +153,36 @@ def train_model(model, loss_fn, optimizer, scheduler, num_epochs =25):
             model.load_state_dict(best_model_wts)
             return model
 
+# def testing(model):
+#     classes = ('cancer', 'not_cancer')#########################
+#
+#
+#     # test set loader
+#     #testset = torchvision.datasets.CIFAR10(root='./data', train=False,  #################################path to test
+#                 #                           download=True, transform=transform_imgs['test'])
+#
+#     class_names = img_data['test'].classes
+#     testloader = torch.utils.data.DataLoader(dataloaders['test'], batch_size=4,
+#                                              shuffle=False, num_workers=2)
+#
+#     _, predicted = torch.max(testloader, 1)
+#
+#     print('Predicted: ', ' '.join('%5s' % classes[predicted[j]]
+#                                   for j in range(2)))
+#
+#     correct = 0
+#     total = 0
+#     with torch.no_grad():
+#         for data in dataloaders['test']:
+#             images, labels = data
+#             outputs = model(images)
+#             _, predicted = torch.max(outputs.data, 1)
+#             total += labels.size(0)
+#             correct += (predicted == labels).sum().item()
+#
+#     print('Accuracy of the network on the 10000 test images: %d %%' % (
+#             100 * correct / total))
+
 if __name__ == "__main__":
     #to show the images we add to the model
     # inputs, output = next(iter(dataloaders['train']))
@@ -180,3 +217,12 @@ if __name__ == "__main__":
 
     #call to the function of the train with the resnet model
     model = train_model(model_fun, loss_fn, optimizer, exp_lr_scheduler, num_epochs=20)
+
+    #save model
+    PATH = "entire_model.pt"
+    torch.save(model, PATH)
+
+    # Load
+    model = torch.load(PATH)
+    model.eval()
+   # testing(model)
