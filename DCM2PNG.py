@@ -6,7 +6,7 @@ import random
 from random import shuffle
 from math import floor
 
-start_path = "E:\\desktop\\TCIA_Breast_Test"
+start_path = "E:\\desktop\\TCIABreast"
 ctrain_path = start_path+"\\Calc-Training"
 mtrain_path = start_path+"\\Mass-Training\\CBIS-DDSM"
 mtest_path = start_path+"\\Mass-Test"
