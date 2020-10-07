@@ -47,7 +47,7 @@ transform_imgs = {
 }
 
 # connect to the data directory
-data_dir = 'E:\\desktop\\breast_dataset'  #############################################################################training and val
+data_dir = "E:\\desktop\\Detect-Breast-Cancer-in-Mammography-based-on-Anatomical-Structure-of-Breast\\breast_dataset"  #############################################################################training and val
 # two dictionary, one to train and val and second is to cancer and not cancer
 img_data = {x: datasets.ImageFolder(os.path.join(data_dir, x),
                                     transform_imgs[x])
