@@ -47,7 +47,7 @@ transform_imgs = {
 }
 
 # connect to the data directory
-data_dir = 'test_data'  #############################################################################training and val
+data_dir = 'E:\\breast_dataset'  #############################################################################training and val
 # two dictionary, one to train and val and second is to cancer and not cancer
 img_data = {x: datasets.ImageFolder(os.path.join(data_dir, x),
                                     transform_imgs[x])
@@ -86,7 +86,7 @@ def imshow(inp, title=None):
     plt.pause(0.001)  # --
 
 
-def train_model(model, loss_fn, optimizer, scheduler, num_epochs=25):
+def train_model(model, loss_fn, optimizer, scheduler, num_epochs=32):
     since = time.time()
 
     best_model_wts = copy.deepcopy(model.state_dict())
