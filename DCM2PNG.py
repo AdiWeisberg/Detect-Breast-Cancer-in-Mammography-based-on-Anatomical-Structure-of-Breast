@@ -13,7 +13,7 @@ mtest_path = "E:\\TCIA_Breast_Test\\Mass-Test"
 ctest_path = "E:\\TCIA_Breast_Test\\Calc-Test\\CBIS-DDSM"
 path_list = [("Calc-Training", ctrain_path, "Train", "Calc"), ("Mass-Training", mtrain_path, "Train", "Mass"),
              ("Mass-Test", mtest_path, "Test", "Mass"), ("Calc-Test", ctest_path, "Test", "Calc")]
-start_path = "E:\\TCIA_Breast_Test"
+start_path = "E:\\desktop\\TCIA_Breast_Test"
 images_path = os.listdir(start_path)
 
 # Specify the output folder3
@@ -77,12 +77,11 @@ len_calc = floor(calc_train_list.__len__()*0.3)
 i = 0
 for im in mass_train_list:
     if i <= len_mass:
-        i=i+1
+        i = i+1
         shutil.move(train_mass + "\\"+im, val_mass + "\\"+im)
 i = 0
 for im in calc_train_list:
     if i <= len_calc:
         i = i + 1
         shutil.move(train_calc + "\\" + im, val_calc + "\\" + im)
-
 
