@@ -16,7 +16,7 @@ path_list = [("Calc-Training", ctrain_path, "Train", "Calc"), ("Mass-Training", 
 images_path = os.listdir(start_path)
 
 # Specify the output folder3
-result_path = "E:\\desktop\\breast_dataset"
+result_path = "E:\\desktop\\Detect-Breast-Cancer-in-Mammography-based-on-Anatomical-Structure-of-Breast\\breast_dataset"
 images_path = os.listdir(start_path)
 os.makedirs(result_path + "\\" + "Train" + "\\" +"Mass")
 os.makedirs(result_path + "\\" + "Train" + "\\" +"Calc")
