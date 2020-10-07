@@ -6,30 +6,30 @@ import random
 from random import shuffle
 from math import floor
 
-start_path = "..\\TCIABreast"
-ctrain_path = start_path+"\\Calc-Training"
-mtrain_path = start_path+"\\Mass-Training\\CBIS-DDSM"
-mtest_path = start_path+"\\Mass-Test"
-ctest_path = start_path+"\\Calc-Test\\CBIS-DDSM"
+start_path = "..//TCIABreast"
+ctrain_path = start_path+"//Calc-Training"
+mtrain_path = start_path+"//Mass-Training//CBIS-DDSM"
+mtest_path = start_path+"//Mass-Test"
+ctest_path = start_path+"//Calc-Test//CBIS-DDSM"
 path_list = [("Calc-Training", ctrain_path, "Train", "Calc"), ("Mass-Training", mtrain_path, "Train", "Mass"),
              ("Mass-Test", mtest_path, "Test", "Mass"), ("Calc-Test", ctest_path, "Test", "Calc")]
 images_path = os.listdir(start_path)
 
 # Specify the output folder3
-result_path = "E:\\desktop\\Detect-Breast-Cancer-in-Mammography-based-on-Anatomical-Structure-of-Breast\\breast_dataset"
+result_path = "E://desktop//Detect-Breast-Cancer-in-Mammography-based-on-Anatomical-Structure-of-Breast//breast_dataset"
 images_path = os.listdir(start_path)
-os.makedirs(result_path + "\\" + "Train" + "\\" +"Mass")
-os.makedirs(result_path + "\\" + "Train" + "\\" +"Calc")
-os.makedirs(result_path + "\\" + "Test" + "\\" +"Mass")
-os.makedirs(result_path + "\\" + "Test" + "\\" +"Calc")
-os.makedirs(result_path + "\\" + "Val" + "\\" +"Calc")
-os.makedirs(result_path + "\\" + "Val" + "\\" +"Mass")
+os.makedirs(result_path + "//" + "Train" + "//" +"Mass")
+os.makedirs(result_path + "//" + "Train" + "//" +"Calc")
+os.makedirs(result_path + "//" + "Test" + "//" +"Mass")
+os.makedirs(result_path + "//" + "Test" + "//" +"Calc")
+os.makedirs(result_path + "//" + "Val" + "//" +"Calc")
+os.makedirs(result_path + "//" + "Val" + "//" +"Mass")
 
 #for split the train to 70,30 for the val:
-train_mass = result_path + "\\" + "Train" + "\\" +"Mass"
-train_calc = result_path + "\\" + "Train" + "\\" +"Calc"
-val_mass = result_path + "\\" + "Val" + "\\" +"Mass"
-val_calc = result_path + "\\" + "Val" + "\\" +"Calc"
+train_mass = result_path + "//" + "Train" + "//" +"Mass"
+train_calc = result_path + "//" + "Train" + "//" +"Calc"
+val_mass = result_path + "//" + "Val" + "//" +"Mass"
+val_calc = result_path + "//" + "Val" + "//" +"Calc"
 
 for folder_name, path, flag1, flag2 in path_list:
     all_images = os.listdir(path)
@@ -37,25 +37,25 @@ for folder_name, path, flag1, flag2 in path_list:
 
     for n, image_name in enumerate(sorted(all_images)):
         print(folder_name, image_name)
-        sub1 = os.listdir(path + "\\" + image_name)
-        sub2 = os.listdir(path + "\\" + image_name + "\\" + sub1[0])
+        sub1 = os.listdir(path + "//" + image_name)
+        sub2 = os.listdir(path + "//" + image_name + "//" + sub1[0])
         full_path = os.path.join(path, image_name, sub1[0], sub2[0])
         files_in_folder = os.listdir(full_path)
         # if(len(files_in_folder) != 2):
         #     raise Exception('there is not png image in directory: {} '.format(full_path))
         # # Specify the output folder path that will contain 2 files - source and tagged image.
-        new_location = result_path + "\\" + flag1 + "\\" + flag2 + "\\" + image_name
+        new_location = result_path + "//" + flag1 + "//" + flag2 + "//" + image_name
         os.makedirs(new_location)
         # convert dcm to png:
-        dcm_to_png_file = full_path + "\\1-1.dcm"
+        dcm_to_png_file = full_path + "//1-1.dcm"
         ds = dicom.dcmread(dcm_to_png_file)
         pixel_array_numpy = ds.pixel_array
-        save_path = new_location + "\\" + "Source.png"
+        save_path = new_location + "//" + "Source.png"
         print("dcm to png for file " + str(n) + " succeeded? ", str(cv2.imwrite(save_path, pixel_array_numpy)))
         for filename in files_in_folder:
             if filename.endswith(".png"):
-                png_new_location = new_location + "\\" + "Tagged.png"
-                png_old_location = full_path + "\\" + "1-1.png"
+                png_new_location = new_location + "//" + "Tagged.png"
+                png_old_location = full_path + "//" + "1-1.png"
                 shutil.move(png_old_location, png_new_location)
 
 
