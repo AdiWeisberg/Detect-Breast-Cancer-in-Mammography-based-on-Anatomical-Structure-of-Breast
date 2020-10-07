@@ -6,18 +6,17 @@ import random
 from random import shuffle
 from math import floor
 
-
-ctrain_path = "E:\\TCIA_Breast_Test\\Calc-Training"
-mtrain_path = "E:\\TCIA_Breast_Test\\Mass-Training\\CBIS-DDSM"
-mtest_path = "E:\\TCIA_Breast_Test\\Mass-Test"
-ctest_path = "E:\\TCIA_Breast_Test\\Calc-Test\\CBIS-DDSM"
+start_path = "E:\\desktop\\TCIA_Breast_Test"
+ctrain_path = start_path+"\\Calc-Training"
+mtrain_path = start_path+"\\Mass-Training\\CBIS-DDSM"
+mtest_path = start_path+"\\Mass-Test"
+ctest_path = start_path+"\\Calc-Test\\CBIS-DDSM"
 path_list = [("Calc-Training", ctrain_path, "Train", "Calc"), ("Mass-Training", mtrain_path, "Train", "Mass"),
              ("Mass-Test", mtest_path, "Test", "Mass"), ("Calc-Test", ctest_path, "Test", "Calc")]
-start_path = "E:\\desktop\\TCIA_Breast_Test"
 images_path = os.listdir(start_path)
 
 # Specify the output folder3
-result_path = "E:\\breast_dataset"
+result_path = "E:\\desktop\\breast_dataset"
 images_path = os.listdir(start_path)
 os.makedirs(result_path + "\\" + "Train" + "\\" +"Mass")
 os.makedirs(result_path + "\\" + "Train" + "\\" +"Calc")
