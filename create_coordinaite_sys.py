@@ -373,15 +373,16 @@ def change_image_size(image, path, image_name, list_of_sizes, x_max, y_max):
     resized_image = cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
 
     # Second paste image on blank image with max size
-    blank_image = PIL.Image.new(mode="RGB", size=(x_max, y_max))
-    pasted_image = blank_image.paste(resized_image)  # the new image after paste on the blank image
+    blank_image = np.zeros((y_max, x_max, 3), np.uint8)
+    blank_image[:image.shape[0], :image.shape[1]] = image
+
 
     cv2.imshow("resized_image", resized_image)
     cv2.waitKey(0)
-    cv2.imshow("paste_image", pasted_image)
+    cv2.imshow("paste_image", blank_image)
     cv2.waitKey(0)
 
-    cv2.imwrite(image_name, image_name, path)
+    cv2.imwrite(image_name, blank_image, path) #saving the new image
 
 
 def main():
