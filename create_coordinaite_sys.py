@@ -336,10 +336,10 @@ def ratio_calc(list_of_wh):
 
 
 # crop from the image only the brest .
-def crop_breast_from_image(y_top, y_bottom, x_nipple, image):
-    cropped_image = image[0:x_nipple + 100, y_top:y_bottom]
+# y top - is the top of the picture , so its number smaller then the y_bottom because of the coordinates. 
+def crop_breast_from_image(x_nipple, y_top, y_bottom, image):
+    cropped_image = image[y_top:y_bottom, 0:x_nipple+50]
     return cropped_image
-
 
 # calculates the change of image size by ratio info.
 # the ratio calculated within the function "ratio_calc"
