@@ -1,12 +1,15 @@
+import PIL
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from PIL import Image
+
 from scipy import ndimage
 import find_borders, find_countor, RANSAC
 import math
 import imutils
 from planar import BoundingBox
+from PIL import Image
+# import ImageB
 
 from scipy import signal
 
@@ -128,18 +131,6 @@ def Finding_Length(poly_top, poly_bottom):
 
 
 """
-3. run on all the images: 
-Run on all the images, calculate length and width and store the results in two arrays.
-After that, calculate for each array its AVG.
-"""
-
-
-# TODO: (Priority = 4)
-def calculate_Lengths_and_widths_avg():
-    pass
-
-
-"""
 3. Image rotation
 """
 
@@ -150,31 +141,6 @@ def angle_calc(line):
     # return math.degrees(math.atan(np.absolute((m2 - m1)/(1+m2*m1))))
     return 90 + math.degrees(math.atan(m1))
 
-
-# Implement of rotate_bound function:
-# def rotate_bound(image, angle):
-#     # grab the dimensions of the image and then determine the
-#     # centre
-#     (h, w) = image.shape[:2]
-#     (cX, cY) = (w // 2, h // 2)
-#
-#     # grab the rotation matrix (applying the negative of the
-#     # angle to rotate clockwise), then grab the sine and cosine
-#     # (i.e., the rotation components of the matrix)
-#     M = cv2.getRotationMatrix2D((cX, cY), angle, 1.0)
-#     cos = np.abs(M[0, 0])
-#     sin = np.abs(M[0, 1])
-#
-#     # compute the new bounding dimensions of the image
-#     nW = int((h * sin) + (w * cos))
-#     nH = int((h * cos) + (w * sin))
-#
-#     # adjust the rotation matrix to take into account translation
-#     M[0, 2] += (nW / 2) - cX
-#     M[1, 2] += (nH / 2) - cY
-#
-#     # perform the actual rotation and return the image
-#     return cv2.warpAffine(image, M, (nW, nH))
 
 def format_float(num):
     return np.format_float_positional(num, trim='-')
@@ -234,8 +200,8 @@ def rotate(image, angle, top_point, nipple_point, eq_line_muscle):
 
 # TODO: (Priority = 2) More accurate
 def ransac_polyfit(countors, center_point, h, w):
-    x_nipple , _ = center_point
-    width_box = x_nipple * 1/2  # half of the width .
+    x_nipple, _ = center_point
+    width_box = x_nipple * 1 / 2  # half of the width .
 
     bbox = BoundingBox.from_center(center_point, width=width_box, height=2500)  # bounding box from center point
 
@@ -255,10 +221,11 @@ def ransac_polyfit(countors, center_point, h, w):
             v = [b[0][0], b[0][1]]  # current point
             print(v)
 
-            if b[0][1] <= 5 or b[0][1] >= h - 5 or b[0][0] >= w - 5:  # if the contour on the border of the image - ignore it.
+            if b[0][1] <= 5 or b[0][1] >= h - 5 or b[0][
+                0] >= w - 5:  # if the contour on the border of the image - ignore it.
                 continue
 
-            if not bbox.contains_point(v): #if not in the bound box , continue
+            if not bbox.contains_point(v):  # if not in the bound box , continue
                 continue
 
             np.append(a_test, b)
@@ -303,11 +270,38 @@ def find_new_dot(x, y, angle, center):
     print("angle_rad = ", angle_rad)
     x_new = x * np.cos(angle_rad) + y * np.sin(angle_rad)
     y_new = -(x - cX) * np.sin(angle_rad) + (y - cY) * np.cos(angle_rad) + cY
-    return (x_new, y_new)
+    return x_new, y_new
 
-# TODO: (Priority = 1) checks what come first from the tuple in the list. w or h.
-# the function calculates the avg of the length and  width of the breast
-def avg_calc(size_breast_list):
+
+'''
+# TODO: (Priority = 1) לבדוק אם זה נכון שהפרפורציה של השד משתנה בהתאם לזה שמשנים את הגודל של התמונה כך או לעשות דרך אחרת!
+# calculation of the new size of the image :
+# new_y = ( y_image * avg_y_breast ) / y_breast
+# new_x = ( x_image * avg_x_breast ) / x_breast
+def new_coordinates(xy_breast_list, image, image_name, avg):
+    avg_w, avg_h = avg
+    width_b, height_b = xy_breast_list[image_name]
+    (h_image, w_image) = image.shape[:2]
+
+    # calc the new size of image by knowing the avg.
+    new_h = (h_image * avg_h) / height_b
+    new_w = (w_image * avg_w) / width_b
+    dim = (new_w, new_h)
+
+
+
+    # to save iamge ?
+    # or to return it?
+'''
+
+"""
+3. run on all the images: 
+Run on all the images, calculate length and width and store the results in two arrays.
+After that, calculate for each array its AVG.
+"""
+
+
+def sum_calc(size_breast_list):
     widths = 0
     lengths = 0
 
@@ -316,30 +310,78 @@ def avg_calc(size_breast_list):
         widths += width
         lengths += length
 
-    avg = widths / length(size_breast_list), lengths / length(size_breast_list)
-    return avg
+    size = length(size_breast_list)
+    return widths, lengths, size
 
 
-# TODO: (Priority = 1) לבדוק אם זה נכון שהפרפורציה של השד משתנה בהתאם לזה שמשנים את הגודל של התמונה כך או לעשות דרך אחרת!
-# calculation of the new size of the image :
-# new_y = ( y_image * avg_y_breast ) / y_breast
-# new_x = ( x_image * avg_x_breast ) / x_breast
-def new_coordinates(size_breast_list, image, image_name, avg):
-    avg_w, avg_h = avg
-    width_b, height_b = size_breast_list[image_name]
-    (h_image, w_image) = image.shape[:2]
+"""
+3. ratio between the width and length avg
 
-    # calc the new size of image by knowing the avg.
-    new_h = (h_image * avg_h) / height_b
-    new_w = (w_image * avg_w) / width_b
-    dim = (new_w, new_h)
+"""
 
-    resized = cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
-    cv2.imshow("resized_image", resized)
+
+def ratio_calc(list_of_wh):
+    widths = 0
+    lengths = 0
+    sum = 0
+
+    for i in list_of_wh:
+        w, h, size = i
+        widths += w
+        lengths += h
+        sum += size
+
+    ratio = (widths / sum) / (lengths / sum)
+    return ratio
+
+
+# crop from the image only the brest .
+def crop_breast_from_image(y_top, y_bottom, x_nipple, image):
+    cropped_image = image[0:x_nipple + 100, y_top:y_bottom]
+    return cropped_image
+
+
+# calculates the change of image size by ratio info.
+# the ratio calculated within the function "ratio_calc"
+
+def change_image_by_ratio(xy_breast_list, list_after_ration, ratio_avg):
+    for i in xy_breast_list:
+        w, h = i
+        add_for_x = ratio_avg * h - w
+        w = w + add_for_x
+        list_after_ration.insert(i, (w, h))
+    return list_after_ration
+
+
+# checks the max x and max y in list.
+def max_image_size(list_after_ration, x_max=0, y_max=0):
+    for i in list_after_ration:
+        x, y = i
+        if x > x_max:
+            x_max = x
+        if y > y_max:
+            y_max = y
+
+    return x_max, y_max
+
+
+# sizes of max image - x_max,y_max
+def change_image_size(image, path, image_name, list_of_sizes, x_max, y_max):
+    # First resize image by ratio
+    w, h = list_of_sizes[image_name]
+    dim = (w, h)
+    resized_image = cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
+
+    # Second paste image on blank image with max size
+    blank_image = PIL.Image.new(mode="RGB", size=(x_max, y_max))
+    pasted_image = blank_image.paste(resized_image)  # the new image after paste on the blank image
+
+    cv2.imshow("resized_image", resized_image)
+    cv2.waitKey(0)
+    cv2.imshow("paste_image", pasted_image)
     cv2.waitKey(0)
 
-    # to save iamge ?
-    # or to return it?
+    cv2.imwrite(image_name, image_name, path)
 
 
 def main():
@@ -376,14 +418,10 @@ def main():
     cv2.circle(source, (int(0), int(poly_top[0])), radius=30, color=(0, 255, 255), thickness=20)
     cv2.circle(source, (int(0), int(poly_bottom[0])), radius=30, color=(0, 255, 255), thickness=20)
 
-    bbox = BoundingBox.from_center(nipple_point, width=1000, height=2500)  # bounding box
-
-    cv2.rectangle(source, (1497-500 , 3727-1250), (1497+500, 3727+1250),(255, 0, 0),20)
-    # view images:
-    cv2.namedWindow('test_image', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('test_image', 600, 600)
-    cv2.imshow("test_image", source)
-    cv2.waitKey(0)
+    # TODO: crop image! explanation:
+    # cropping the image by sending the two points of the length (y bottom , and y top) - crop only the brest from
+    # all the image
+    # call the function "crop_breast_from_image" or put it here .
 
     # calculate new length of muscle:
     muscle_length = Finding_Length(poly_top, poly_bottom)
@@ -393,6 +431,9 @@ def main():
     width_length = nipple_point[0]
     width_equation = np.array(nipple_point[1])
     width_iter_muscle = (0, nipple_point[1])  # The intercetion point between the muscle line to the width line.
+
+    # TODO: save width and length of the image inside of a list in order to find avg . after all the loops.
+    # TODO: after the loop and find the avg. for each photo change size by the ratio that you get from ratio function.
 
 
 if __name__ == '__main__':
