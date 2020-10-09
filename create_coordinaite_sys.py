@@ -496,6 +496,95 @@ def find_new_dot(x, y, angle, center):
     y_new = -(x - cX) * np.sin(angle_rad) + (y - cY) * np.cos(angle_rad) + cY
     return (x_new, y_new)
 
+"""
+3. run on all the images: 
+Run on all the images, calculate length and width and store the results in two arrays.
+After that, calculate for each array its AVG.
+"""
+
+
+def sum_calc(size_breast_list):
+    widths = 0
+    lengths = 0
+
+    for i in size_breast_list:
+        width, length = i
+        widths += width
+        lengths += length
+
+    size = length(size_breast_list)
+    return widths, lengths, size
+
+
+"""
+3. ratio between the width and length avg
+
+"""
+
+
+def ratio_calc(list_of_wh):
+    widths = 0
+    lengths = 0
+    sum = 0
+
+    for i in list_of_wh:
+        w, h, size = i
+        widths += w
+        lengths += h
+        sum += size
+
+    ratio = (widths / sum) / (lengths / sum)
+    return ratio
+
+
+# crop from the image only the brest .
+# y top - is the top of the picture , so its number smaller then the y_bottom because of the coordinates.
+def crop_breast_from_image(x_nipple, y_top, y_bottom, image):
+    cropped_image = image[y_top:y_bottom, 0:x_nipple]
+    return cropped_image
+
+
+# calculates the change of image size by ratio info.
+# the ratio calculated within the function "ratio_calc"
+def change_image_by_ratio(xy_breast_list, list_after_ration, ratio_avg):
+    for i in xy_breast_list:
+        w, h = i
+        add_for_x = ratio_avg * h - w
+        w = w + add_for_x
+        list_after_ration.insert(i, (w, h))
+    return list_after_ration
+
+
+# checks the max x and max y in list.
+def max_image_size(list_after_ration, x_max=0, y_max=0):
+    for i in list_after_ration:
+        x, y = i
+        if x > x_max:
+            x_max = x
+        if y > y_max:
+            y_max = y
+
+    return x_max, y_max
+
+
+# sizes of max image - x_max,y_max
+def change_image_size(image, path, image_name, list_of_sizes, x_max, y_max):
+    # First resize image by ratio
+    w, h = list_of_sizes[image_name]
+    dim = (w, h)
+    resized_image = cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
+
+    # Second paste image on blank image with max size
+    blank_image = np.zeros((y_max, x_max, 3), np.uint8)
+    blank_image[:image.shape[0], :image.shape[1]] = image
+
+
+    cv2.imshow("resized_image", resized_image)
+    cv2.waitKey(0)
+    cv2.imshow("paste_image", blank_image)
+    cv2.waitKey(0)
+
+    cv2.imwrite(image_name, blank_image, path)
 
 def main():
     # Read tagged and source images:
