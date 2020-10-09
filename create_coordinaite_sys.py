@@ -42,11 +42,6 @@ def remove_white_frame(image, top_point):
         for j in range(w):
             image[i][j] = 0
 
-    # view images:
-    # cv2.namedWindow('output1', cv2.WINDOW_NORMAL)
-    # cv2.resizeWindow('output1', 600, 600)
-    # cv2.imshow("output1", image)
-    # cv2.waitKey(0)
     return image
 
 
@@ -58,7 +53,6 @@ def remove_white_frame(image, top_point):
 
 def remove_white_frame_norotate(image, top_point, buttom_point):
     h, w = image.shape[:2]
-
     # from bottom:
     if abs(h - buttom_point[1]) > 200:
         h_limit_bottom = buttom_point[1] + 200
@@ -490,13 +484,6 @@ def run_processing(source, tagged):
 
     if angle > 90:
         source = remove_white_frame_norotate(source, top_point, buttom_point)
-        # cv2.circle(source, (int(top_point[0]), int(top_point[1])), radius=30, color=(255, 0, 0), thickness=20)
-        # cv2.circle(source, (int(buttom_point[0]), int(buttom_point[1])), radius=30, color=(255, 0, 0), thickness=20)
-        # view images:
-        # cv2.namedWindow('output1', cv2.WINDOW_NORMAL)
-        # cv2.resizeWindow('output1', 600, 600)
-        # cv2.imshow("output1", source)
-        # cv2.waitKey(0)
 
     if angle < 90:
         isRotated = "yes"
@@ -585,7 +572,6 @@ def main():
                  ("Mass-Training", mass_train_path, "Train", "Mass", train_mass),
                  ("Mass-Test", mass_test_path, "Test", "Mass", test_mass),
                  ("Calc-Test", calc_test_path, "Test", "Calc", test_calc)]
-    images_path = os.listdir(start_path)
 
     # iterate each folder and image and get the image processing done
     list_of_folders = []
