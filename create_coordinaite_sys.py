@@ -7,10 +7,10 @@ from scipy import ndimage
 import find_borders, find_countor, RANSAC
 import math
 import imutils
-from planar import BoundingBox
+import pydicom
 from collections import Counter
-
-from scipy import signal
+# from planar import BoundingBox
+# from scipy import signal
 
 """
 0. Delete white frame:
@@ -236,17 +236,13 @@ def rotate(image, angle, top_point, nipple_point):
 # TODO: (Priority = 2) More accurate
 def ransac_polyfit(countors, center_point, h, w, source, isRotated):
     x_nipple, _ = center_point
-    width_box = x_nipple * 1 / 2  # half of the width .
 
+    """ --- part of another method we tried that includes bounding boxes --- """
+    # width_box = x_nipple * 1 / 2  # half of the width .
     # bbox = BoundingBox.from_center(center_point, width=w, height=2500)  # bounding box from center point
     # bbox = BoundingBox([(), ()])  # bounding box from center point
     # temp_image = np.copy(source)
     # cv2.rectangle(temp_image, (1497 - 500, 3727 - 1250), (1497 + 500, 3727 + 1250), (255, 0, 0), 20)
-    # view images:
-    # cv2.namedWindow('test_image', cv2.WINDOW_NORMAL)
-    # cv2.resizeWindow('test_image', 600, 600)
-    # cv2.imshow("test_image", source)
-    # cv2.waitKey(0)
 
     cx, cy = center_point
     # unzip to x and y arrays:
@@ -256,8 +252,11 @@ def ransac_polyfit(countors, center_point, h, w, source, isRotated):
     top_arr_y = np.array([])
     poly_top = []
     poly_bottom = []
-    original_image = np.copy(source)
+
+
+    # Sort all contours on order to find biggest contour area that should include the breast contours.
     countors = sorted(countors, key=cv2.contourArea, reverse=True)[:1]
+    original_image = np.copy(source)
     for c in countors:
         cv2.drawContours(original_image, [c], -1, (255, 0, 0), 10)
         cv2.namedWindow('Contours_By_Area', cv2.WINDOW_NORMAL)
@@ -265,18 +264,20 @@ def ransac_polyfit(countors, center_point, h, w, source, isRotated):
         cv2.imshow('Contours_By_Area', original_image)
         cv2.waitKey(0)
 
-    ############ draw the biggest contour that we gonna use:
+    ### draw the biggest contour that we gonna use (The frame of the image will be deleted later on)
     image_with_contours_1 = np.copy(source)
     image_with_contours = cv2.drawContours(image_with_contours_1, countors, -1, (0, 255, 0), 5, cv2.LINE_AA)
     cv2.imwrite("image_with_contours_1.png", image_with_contours)
-    ############
+    ###
+
     for a in countors:
         for b in a:
             # optional to add - blacken noise from the nipple to the right.
-            # if b[0][0] > cx + 200:
-            #     continue
-            # if b[0][1] <= 5 or b[0][1] >= h - 5 or b[0][0] >= w - 5:  # if the contour on the border of the image - ignore it.
-            #     continue
+            if b[0][0] > cx + 50:
+                continue
+            # if the contour on the border of the image - ignore it.
+            if b[0][1] <= 5 or b[0][1] >= h - 5 or b[0][0] >= w - 5:
+                continue
 
             """ --- part of another method we tried that includes bounding boxes --- """
             # if not bbox.contains_point(v): #if not in the bound box , continue
@@ -291,14 +292,14 @@ def ransac_polyfit(countors, center_point, h, w, source, isRotated):
                 bottom_arr_x = np.append(bottom_arr_x, b[0][0])
                 bottom_arr_y = np.append(bottom_arr_y, -1 * b[0][1])  # multiply with -1 only for desmos view!!
 
-    top_muscle = gradient_calc(poly_top, center_point, "Top", isRotated)
-    bottom_muscle = gradient_calc(poly_bottom, center_point, "Bottom", isRotated)
+    top_muscle = gradient_compare(poly_top, center_point, "Top", isRotated)
+    bottom_muscle = gradient_compare(poly_bottom, center_point, "Bottom", isRotated)
     coeff_top = RANSAC.quadratic_ransac_curve_fit("Upper Polynomial", top_arr_x, top_arr_y)
     coeff_bottom = RANSAC.quadratic_ransac_curve_fit("Lower Polynomial", bottom_arr_x, bottom_arr_y)
     return (coeff_top, coeff_bottom, top_muscle, bottom_muscle)
 
 
-def gradient_calc(poly, nipple_point, flag, isRotated):
+def gradient_compare(poly, nipple_point, flag, isRotated):
     xy = (-1, -1)
     x_old = nipple_point[0]
     y_old = nipple_point[1]
@@ -307,13 +308,10 @@ def gradient_calc(poly, nipple_point, flag, isRotated):
     list_of_res = []
     res_counter = dict()
     avg_ten_m = -100
-    cout_signs = 0
     old_ten_avg = -100
     n = 20
     if flag == "Bottom":
-        print("~~~~~~~~~~~~~~ Bottom ~~~~~~~~~~~~~~")
         counter_to_ten = 0
-        print(" poly[0] = ", poly[0])
         m = (poly[0][1] - nipple_point[1]) / (poly[0][0] - nipple_point[0])
         m_old = m
         first_time = False
@@ -321,33 +319,36 @@ def gradient_calc(poly, nipple_point, flag, isRotated):
             x, y = points[0], points[1]
             if x_old == x or y_old == y:
                 continue
-
             if np.isinf(m):
                 m = m_old
             print(" gradient = ", (poly[i][1] - y_old) / (poly[i][0] - x_old))
             m = (poly[i][1] - y_old) / (poly[i][0] - x_old)
-            tetha_curr = math.degrees(math.atan(m))
+            # Case for first n contours to fill the list
             if counter_to_ten < n - 1:
                 last_ten.append([m, (x, y)])
                 counter_to_ten += 1
-                print(" current point m = ", m)
-                print(" tetha_curr = ", tetha_curr)
-                print(" x ,y = ", (x, y))
+            # After filling n places in queue we starts to calculate avg of the gradient for each n contours
             elif counter_to_ten == n - 1:
+                # Cases like this are probably noises
                 if y_old - y > 40:
                     continue
                 last_ten.append([m, (x, y)])
                 only_m = []
+
+                # Create list of n current gradients
                 for j in range(0, len(last_ten)):
                     only_m.append(last_ten[j][0])
+
+                # Calculate avg, find maximum gradient and create array of counters for each contour that has been choosen to be the biggest between all n.
                 avg_ten_m = sum(only_m) / n
-                cout_signs = sum(1 for c in last_ten if c[0] > 0)  # count 3 pluses +++
                 index_max_m = np.argmax(only_m)
                 res = last_ten[index_max_m][1]
                 list_of_res.append(res)
+                res_counter = Counter(list_of_res)
+
+                # Calculate maximum y for all n current contours
                 y_max = sorted(list_of_res, key=lambda x: x[1], reverse=True)
                 print(" y_max = ", y_max)
-                res_counter = Counter(list_of_res)
                 if -1 < avg_ten_m < 0 and x_old - x <= 20 and avg_ten_m > old_ten_avg and y_old < y and abs(
                         y_old - y) < 100:
                     if not first_time:
@@ -356,27 +357,22 @@ def gradient_calc(poly, nipple_point, flag, isRotated):
                     print("Point found!!")
                     print(" x ,y  = ", (x, y))
                     print(" current point m = ", last_ten[0][0])
-                    print(" tetha_curr = ", tetha_curr)
                     print(" avg_curr = ", avg_ten_m)
                     print(" x ,y res = ", res)
                     print(" Max res = ", Counter(res_counter).most_common())
-                    # break
                 else:
                     print(" x ,y  = ", (x, y))
                     print(" current point m = ", last_ten[-1][0])
-                    print(" tetha_curr = ", tetha_curr)
                     print(" avg_curr = ", avg_ten_m)
                     print(" x ,y res = ", res)
                     print(" y_max = ", y_max)
                     print(" Max res = ", Counter(res_counter).most_common())
-
                 last_ten.pop(0)
                 old_ten_avg = avg_ten_m
 
             x_old = x
             y_old = y
             m_old = m
-            tetha = tetha_curr
         xy = res_counter.most_common(1)[0][0]
 
     if flag == "Top":
@@ -391,8 +387,6 @@ def gradient_calc(poly, nipple_point, flag, isRotated):
         tetha_curr_old = 0
         first_time = False
         for i, points in enumerate(poly[-int(len(poly) * 0.5)::-50]):
-            # if (x_old - x) == 50 or (abs(x_old - x) > 200):
-            #     continue
             x, y = points[0], points[1]
             if x_old == x or y_old == y:
                 continue
@@ -518,6 +512,7 @@ def run_processing(source, tagged):
     # width_iter_muscle = (0, nipple_point[1])  # The intercetion point between the muscle line to the width line.
 
     h_image, w_image = source.shape[:2]
+    print(" info image: (h_image, w_image, length_breast, width_breast) = ", (h_image, w_image, length_breast, width_breast))
     return source, (h_image, w_image, length_breast, width_breast)
 
 """
@@ -546,7 +541,7 @@ def main():
     # tagged = cv2.imread("images\\Mass-Test_P_00699_RIGHT_CC_Tagged.png")
     # source = cv2.imread("images\\Mass-Test_P_00699_RIGHT_CC.png")
 
-    result_path = "E:\\breast_dataset"
+    result_path = "E:\\breast_dataset_test"
     os.makedirs(result_path + "\\" + "Train" + "\\" + "Mass")
     os.makedirs(result_path + "\\" + "Train" + "\\" + "Calc")
     os.makedirs(result_path + "\\" + "Test" + "\\" + "Mass")
@@ -562,9 +557,9 @@ def main():
     val_mass = result_path + "\\" + "Val" + "\\" + "Mass"
     val_calc = result_path + "\\" + "Val" + "\\" + "Calc"
 
-    start_path = "E:\\breast_dataset\\Train"
-    calc_train_path = start_path + "\\Calc Training"
-    mass_train_path = start_path + "\\Mass-Training\\CBIS-DDSM"
+    start_path = "E:\\TCIABreast"
+    calc_train_path = start_path + "\\Calc-Training"
+    mass_train_path = start_path + "\\Mass Training\\CBIS-DDSM"
     mass_test_path = start_path + "\\Mass-Test"
     calc_test_path = start_path + "\\Calc-Test\\CBIS-DDSM"
 
@@ -577,7 +572,7 @@ def main():
     list_of_folders = []
     for folder_name, path, flag1, flag2, save_path in path_list:
         all_images_specific_folder = os.listdir(path)
-        print("path_images = ", all_images)
+        print("path_images = ", all_images_specific_folder)
         folder_lst = []
         # iterate over all the images in specific folder
         for n, image_name in enumerate(sorted(all_images_specific_folder)):
@@ -593,13 +588,13 @@ def main():
 
             # Specify the output folder path that will contain 2 files - source and tagged image.
             new_location = result_path + "\\" + flag1 + "\\" + flag2
-            os.makedirs(new_location)
+            # os.makedirs(new_location)
 
             # convert dcm to png and copy it to new path:
             dcm_to_png_file = full_path + "\\1-1.dcm"
-            ds = dicom.dcmread(dcm_to_png_file)
+            ds = pydicom.dcmread(dcm_to_png_file)
             pixel_array_numpy = ds.pixel_array
-            save_path_source = new_location + "\\" + n + ".png"
+            save_path_source = new_location + "\\" + str(n) + ".png"
             print("dcm to png for file " + str(n) + " succeeded? ",
                   str(cv2.imwrite(save_path_source, pixel_array_numpy)))
 
