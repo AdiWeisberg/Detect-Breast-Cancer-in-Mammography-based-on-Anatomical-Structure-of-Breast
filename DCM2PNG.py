@@ -10,6 +10,7 @@ import errno
 
 def get_file_list_from_dir(datadir):
     all_files = os.listdir(os.path.abspath(datadir))
+    print(all_files)
     data_files = list(filter(lambda file: file.endswith('.png'), all_files))
     return data_files
 
@@ -51,20 +52,21 @@ for folder_name, path, flag1, flag2 in path_list:
         # if(len(files_in_folder) != 2):
         #     raise Exception('there is not png image in directory: {} '.format(full_path))
         # Specify the output folder path that will contain 2 files - source and tagged image.
+        print("flag1", flag1)
+        print("flag2",flag2)
+        print("image_name", image_name)
         new_location = result_path + "\\" + flag1 + "\\" + flag2 + "\\" + image_name
-        os.makedirs(new_location)
+        #os.makedirs(new_location)
         # convert dcm to png:
-        dcm_to_png_file = full_path + "\\1-1.dcm"
-        ds = dicom.dcmread(dcm_to_png_file)
-        pixel_array_numpy = ds.pixel_array
-        save_path = new_location + "\\" + "Source.png"
-        print("dcm to png for file " + str(n) + " succeeded? ", str(cv2.imwrite(save_path, pixel_array_numpy)))
-        #
-        # for filename in files_in_folder:#######if need to move tagged image!!
-        #     if filename.endswith(".png"):
-        #         png_new_location = new_location + "\\" + "Tagged.png"
-        #         png_old_location = full_path + "\\" + "1-1.png"
-        #         shutil.move(png_old_location, png_new_location)
+        try:
+            dcm_to_png_file = full_path + "\\1-1.dcm"
+            ds = dicom.dcmread(dcm_to_png_file)
+            pixel_array_numpy = ds.pixel_array
+            save_path = new_location + ".png"
+            print("dcm to png for file " + str(n) + " succeeded? ", str(cv2.imwrite(save_path, pixel_array_numpy)))
+        except OSError as e:
+            print(save_path)
+
 #split the data from train to val:
 
 mass_train_list = get_file_list_from_dir(train_mass)#list of all the images of mass train
