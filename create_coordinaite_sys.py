@@ -153,8 +153,10 @@ def Find_Width(point1, point2):
 
 
 # returns the length of the muscle line.
-def Finding_Length(poly_top, poly_bottom):
-    return (poly_bottom - poly_top)
+def Finding_Length(top_muscle, bottom_muscle):
+    x1, y1 = bottom_muscle
+    x2, y2 = top_muscle
+    return math.hypot(x2 - x1, y2 - y1)
 
 
 """
@@ -461,7 +463,7 @@ def find_new_dot(x, y, angle, center):
     return (x_new, y_new)
 
 
-def run_processing(source, tagged):
+def run_processing(source, tagged, roi):
     h, w = tagged.shape[:2]
     isRotated = "no"
     print("h, w start = ", h, w)
@@ -485,6 +487,7 @@ def run_processing(source, tagged):
         source = remove_white_frame(source, top_point)
 
         source_rotated, nipple_point = rotate(source, angle, top_point, nipple_point)
+        # roi_rotated, nipple_point = rotate(roi, angle, top_point, nipple_point)
         source = source_rotated
 
     # RANSAC:
@@ -499,21 +502,17 @@ def run_processing(source, tagged):
 
     # TODO: (Priority = 3) Check if true, after get to the best result.
     # calculate new length of muscle:
-    """ 
-    This is calculation of muscle length by using another method of polynomial to find interception points  -  not in use for now.. 
-    """
-    # muscle_length = Finding_Length(poly_top, poly_bottom)
-    length_breast = math.hypot(x2 - x1, y2 - y1)
+    length_breast = Finding_Length(top_muscle, bottom_muscle)
 
-    # calculate width:
+    # calculate new width of muscle:
     width_breast = nipple_point[1]
-    # width_length = nipple_point[0]
-    # width_equation = np.array(nipple_point[1])
-    # width_iter_muscle = (0, nipple_point[1])  # The intercetion point between the muscle line to the width line.
 
+    # get new shape of image after pre-processing:
     h_image, w_image = source.shape[:2]
+
     print(" info image: (h_image, w_image, length_breast, width_breast) = ", (h_image, w_image, length_breast, width_breast))
     return source, (h_image, w_image, length_breast, width_breast)
+    # , roi_rotated add to return!!
 
 """
 This function returns all png files in subs folders of root folder
@@ -559,7 +558,7 @@ def main():
 
     start_path = "E:\\TCIABreast"
     calc_train_path = start_path + "\\Calc-Training"
-    mass_train_path = start_path + "\\Mass Training\\CBIS-DDSM"
+    mass_train_path = start_path + "\\Mass-Training\\CBIS-DDSM"
     mass_test_path = start_path + "\\Mass-Test"
     calc_test_path = start_path + "\\Calc-Test\\CBIS-DDSM"
 
@@ -594,9 +593,10 @@ def main():
             dcm_to_png_file = full_path + "\\1-1.dcm"
             ds = pydicom.dcmread(dcm_to_png_file)
             pixel_array_numpy = ds.pixel_array
-            save_path_source = new_location + "\\" + str(n) + ".png"
-            print("dcm to png for file " + str(n) + " succeeded? ",
-                  str(cv2.imwrite(save_path_source, pixel_array_numpy)))
+            # TODO: Michal use this for the second big for to save iamges
+            #save_path_source = new_location + "\\" + str(n) + ".png"
+            #print("dcm to png for file " + str(n) + " succeeded? ",
+            #      str(cv2.imwrite(save_path_source, pixel_array_numpy)))
 
             # Read images: source and tagged from new folders
             source = cv2.imread(files_in_folder[0])
@@ -604,15 +604,17 @@ def main():
                 tagged = cv2.imread(files_in_folder[0])
             else:
                 tagged = cv2.imread(files_in_folder[1])
-
-            shifted_image, image_info = run_processing(source, tagged)
+            # TODO: Naomi - check if 2 file or 1 is needed!
+            # roi = cv2.imread(files_in_folder[??])
+            roi - []  # delete after set imread for roi
+            shifted_image, image_info = run_processing(source, tagged, roi)
             # This code copy the tagged image to new path - but we don't need it after the processing.
             # png_new_location = new_location + "\\" + n + ".png"
             # png_old_location = full_path + "\\" + "1-1.png"
             # shutil.copy(png_old_location, png_new_location)
 
-            # Save the new shifted image at the same path
-            cv2.imwrite(save_path_source, shifted_image)
+            # Save the new shifted image at the same old path
+            cv2.imwrite(full_path + "\\" + str(n) + ".png", shifted_image)
 
             lst.append(image_info)
         list_of_folders.append(folder_lst)
@@ -631,7 +633,6 @@ def main():
     len_mass = floor(mass_train_list.__len__() * 0.3)
     len_calc = floor(calc_train_list.__len__() * 0.3)
 
-    # TODO: Naomi - randomize instand of taking the first elements?
     i = 0
     for im in mass_train_list:
         if i <= len_mass:
