@@ -22,15 +22,6 @@ def main():
     y_max, x_max = max_image_size(list_new)
     image_resize_by_ratio(path_list, list_new, x_max, y_max)
 
-    # Save the new shifted image at the same old path
-
-
-# TODO: Michal - take this list and work with it. the updated images will be orginized at the tree folder that we talked about under folder of the name of the image
-#  for each shifted image. Each image will be saved as
-
-
-# split the data from train to val:
-
 
 if __name__ == '__main__':
     main()
