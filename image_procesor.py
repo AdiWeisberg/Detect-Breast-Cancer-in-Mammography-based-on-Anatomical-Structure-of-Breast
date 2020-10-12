@@ -88,12 +88,9 @@ def remove_white_frame_norotate(image, top_point, buttom_point):
 
 def Finding_Equation_Line(point1, point2):
     point1 = np.array(point1)
-    print(point1)
     point2 = np.array(point2)
-    print(point2)
     z = np.polyfit(point1, point2, 1)
     m, b = z
-    print(m, b)
     line_length = np.poly1d(z)
     # plt.plot(point1, m * point1 + b)
     # plt.show()
@@ -179,8 +176,6 @@ def calculate_Lengths_and_widths_avg():
 
 def angle_calc(line):
     m1, b = line
-    # m2 = 1
-    # return math.degrees(math.atan(np.absolute((m2 - m1)/(1+m2*m1))))
     return 90 + math.degrees(math.atan(m1))
 
 
@@ -203,7 +198,6 @@ def format_float(num):
 def rotate(image, angle, top_point, nipple_point):
     # Stage 1 - rotation the image by the angle.
     (h, w) = image.shape[:2]
-    print("(h, w) before rotate = ", (h, w))
     rotated = imutils.rotate_bound(image, -angle)  # think to be a better option then the ndimage.rotate
     cv2.imwrite("image_after_rotate.png", rotated)
 
@@ -213,7 +207,6 @@ def rotate(image, angle, top_point, nipple_point):
     (cX, cY) = (w // 2, h // 2)
     new_point = find_new_dot(x, y, angle, (cX, cY))
     x_new, y_new = new_point
-    print("(h, w) After rotate = ", (h, w))
     nipple_point = find_new_dot(nipple_point[0], nipple_point[1], angle, (cX, cY))
     x_rotated_nipple, y_rotated_nipple = nipple_point
     # cv2.circle(rotated, (int(x_rotated_nipple), int(y_rotated_nipple)), radius=30, color=(255, 0, 0), thickness=20)
@@ -227,7 +220,6 @@ def rotate(image, angle, top_point, nipple_point):
     x_shifted_nipple, y_shifted_nipple = x_rotated_nipple - x_new, y_rotated_nipple
     nipple_point = (x_shifted_nipple, y_shifted_nipple)
     cv2.imwrite("image_after_shift.png", img_translation)
-    print("(h, w) After shift = ", (h, w))
     return img_translation, nipple_point
 
 
@@ -301,6 +293,9 @@ def ransac_polyfit(countors, center_point, h, w, source, isRotated):
     coeff_bottom = RANSAC.quadratic_ransac_curve_fit("Lower Polynomial", bottom_arr_x, bottom_arr_y)
     return (coeff_top, coeff_bottom, top_muscle, bottom_muscle)
 
+def most_frequent(lst):
+    occurence_count = Counter(lst)
+    return occurence_count.most_common(1)[0][0]
 
 def gradient_compare(poly, nipple_point, flag, isRotated):
     xy = (-1, -1)
@@ -309,7 +304,7 @@ def gradient_compare(poly, nipple_point, flag, isRotated):
     last_ten = []
     res = (-1, -1)
     list_of_res = []
-    res_counter = dict()
+    #res_counter = {}
     avg_ten_m = -100
     old_ten_avg = -100
     n = 20
@@ -318,13 +313,12 @@ def gradient_compare(poly, nipple_point, flag, isRotated):
         m = (poly[0][1] - nipple_point[1]) / (poly[0][0] - nipple_point[0])
         m_old = m
         first_time = False
-        for i, points in enumerate(poly[int(len(poly) * 0.5)::50]):
+        for i, points in enumerate(poly[int(len(poly) * 0.3)::30]):
             x, y = points[0], points[1]
             if x_old == x or y_old == y:
                 continue
             if np.isinf(m):
                 m = m_old
-            print(" gradient = ", (poly[i][1] - y_old) / (poly[i][0] - x_old))
             m = (poly[i][1] - y_old) / (poly[i][0] - x_old)
             # Case for first n contours to fill the list
             if counter_to_ten < n - 1:
@@ -332,9 +326,6 @@ def gradient_compare(poly, nipple_point, flag, isRotated):
                 counter_to_ten += 1
             # After filling n places in queue we starts to calculate avg of the gradient for each n contours
             elif counter_to_ten == n - 1:
-                # Cases like this are probably noises
-                if y_old - y > 40:
-                    continue
                 last_ten.append([m, (x, y)])
                 only_m = []
 
@@ -347,63 +338,42 @@ def gradient_compare(poly, nipple_point, flag, isRotated):
                 index_max_m = np.argmax(only_m)
                 res = last_ten[index_max_m][1]
                 list_of_res.append(res)
-                res_counter = Counter(list_of_res)
 
                 # Calculate maximum y for all n current contours
                 y_max = sorted(list_of_res, key=lambda x: x[1], reverse=True)
-                print(" y_max = ", y_max)
                 if -1 < avg_ten_m < 0 and x_old - x <= 20 and avg_ten_m > old_ten_avg and y_old < y and abs(
                         y_old - y) < 100:
                     if not first_time:
                         list_of_res.append(last_ten[-1][1])
                         first_time = True
-                    print("Point found!!")
-                    print(" x ,y  = ", (x, y))
-                    print(" current point m = ", last_ten[0][0])
-                    print(" avg_curr = ", avg_ten_m)
-                    print(" x ,y res = ", res)
-                    print(" Max res = ", Counter(res_counter).most_common())
-                else:
-                    print(" x ,y  = ", (x, y))
-                    print(" current point m = ", last_ten[-1][0])
-                    print(" avg_curr = ", avg_ten_m)
-                    print(" x ,y res = ", res)
-                    print(" y_max = ", y_max)
-                    print(" Max res = ", Counter(res_counter).most_common())
                 last_ten.pop(0)
                 old_ten_avg = avg_ten_m
-
             x_old = x
             y_old = y
             m_old = m
-        xy = res_counter.most_common(1)[0][0]
+        most_common = [item for item in Counter(list_of_res).most_common()]
+        xy = most_common[0][0]
+
 
     if flag == "Top":
-        print("~~~~~~~~~~~~~~ Top ~~~~~~~~~~~~~~")
         counter_to_ten = 0
         m = (poly[-1][1] - nipple_point[1]) / (poly[-1][0] - nipple_point[0])
-        tetha = math.degrees(math.atan(m))
-        # print(" tetha = ", tetha)
         m_old = m
         x_old = nipple_point[0]
         y_old = nipple_point[1]
         tetha_curr_old = 0
         first_time = False
-        for i, points in enumerate(poly[-int(len(poly) * 0.5)::-50]):
+        for i, points in enumerate(poly[-int(len(poly) * 0.3)::-30]):
             x, y = points[0], points[1]
             if x_old == x or y_old == y:
                 continue
             if np.isinf(m):
                 m = m_old
-            print(" gradient = ", (poly[i][1] - y_old) / (poly[i][0] - x_old))
             m = (poly[i][1] - y_old) / (poly[i][0] - x_old)
             tetha_curr = math.degrees(math.atan(m))
             if counter_to_ten < n - 1:
                 last_ten.append([m, (x, y)])
                 counter_to_ten += 1
-                print(" current point m = ", m)
-                print(" tetha_curr = ", tetha_curr)
-                print(" x ,y = ", (x, y))
             elif counter_to_ten == n - 1:
                 last_ten.append([m, (x, y), tetha_curr])
                 only_m = []
@@ -418,27 +388,10 @@ def gradient_compare(poly, nipple_point, flag, isRotated):
                 res = last_ten[index_m][1]
                 list_of_res.append(res)
                 y_min = sorted(list_of_res, key=lambda x: x[1])
-                print(" y_min = ", y_min)
-                res_counter = Counter(list_of_res)
                 if avg_ten_m > old_ten_avg and count_signs >= 5 and int(tetha_curr) != int(tetha_curr_old):
                     if not first_time:
                         list_of_res.append(last_ten[-1][1])
                         first_time = True
-                    print("Point found!!")
-                    print(" x ,y  = ", (x, y))
-                    print(" current point m = ", last_ten[-1][0])
-                    print(" tetha_curr = ", tetha_curr)
-                    print(" avg_curr = ", avg_ten_m)
-                    print(" x ,y res = ", res)
-                    print(" Max res = ", Counter(res_counter).most_common())
-                    # break
-                else:
-                    print(" x ,y  = ", (x, y))
-                    print(" current point m = ", last_ten[-1][0])
-                    print(" tetha_curr = ", tetha_curr)
-                    print(" avg_curr = ", avg_ten_m)
-                    print(" x ,y res = ", res)
-                    print(" Max res = ", Counter(res_counter).most_common())
                 last_ten.pop(0)
                 old_ten_avg = avg_ten_m
             x_old = x
@@ -446,7 +399,6 @@ def gradient_compare(poly, nipple_point, flag, isRotated):
             m_old = m
             tetha_curr_old = tetha_curr
         xy = y_min[0]
-    print(" point is ", xy)
     return xy
 
 
@@ -546,27 +498,21 @@ def change_image_size(image, path, index, list_of_sizes, x_max, y_max):
 def find_new_dot(x, y, angle, center):
     angle_rad = math.radians(angle)
     cX, cY = center
-    print("angle_rad = ", angle_rad)
     x_new = x * np.cos(angle_rad) + y * np.sin(angle_rad)
     y_new = -(x - cX) * np.sin(angle_rad) + (y - cY) * np.cos(angle_rad) + cY
     return (x_new, y_new)
 
 
-def run_processing(source, tagged,path):
+def run_processing(source, tagged, path):
     h,w = tagged.shape[:2]
-    print(w,h)
     isRotated = "no"
-    print("h, w start = ", h, w)
     # Find line of muscle and nipple
     top_point, buttom_point = find_borders.findLine(tagged)
 
     # Find Equation line and angle for rotation
     eq_line_muscle = Finding_Equation_Line(top_point, buttom_point)
-    print("eq_line_muscle = ", eq_line_muscle)
     angle = angle_calc(eq_line_muscle)
-    print("angle = ", angle)
     _, nipple_point = find_borders.findCircle(tagged)
-    print("nipple_point start = ", nipple_point)
 
     if angle > 90:
         source = remove_white_frame_norotate(source, top_point, buttom_point)
@@ -581,13 +527,12 @@ def run_processing(source, tagged,path):
         source = source_rotated
 
     # RANSAC:
-    # TODO: (Priority = 1) More accurate contours, with minimum noise + Check on several images - Done!.
     countors = find_countor.getEdgeImage(source)
+    print(" path image = ", path)
     poly_top, poly_bottom, top_muscle, bottom_muscle = ransac_polyfit(countors, nipple_point, h, w, source, isRotated)
     x1, y_bottom = bottom_muscle
     x2, y_top = top_muscle
 
-    # TODO: (Priority = 3) Check if true, after get to the best result.
     # calculate new length of muscle:
     length_breast = Finding_Length(top_muscle, bottom_muscle)
 
@@ -598,7 +543,6 @@ def run_processing(source, tagged,path):
     h_image, w_image = source.shape[:2]
     cropped_image = crop_breast_from_image(int(width_breast), int(y_top), int(y_bottom), source)
     cv2.imwrite(path+"\\"+"source.png",cropped_image)
-    # print(" info image: (y_bottom, y_top, length_breast, width_breast) = ", (y_bottom, y_top, length_breast, width_breast))
     return source, (y_bottom, y_top, length_breast, width_breast)
     # , roi_rotated add to return!!
 
