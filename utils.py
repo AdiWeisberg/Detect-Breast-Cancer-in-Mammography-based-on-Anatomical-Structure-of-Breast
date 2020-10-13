@@ -1,7 +1,7 @@
 import cv2
 import os
-from image_procesor import run_processing
-from image_procesor import change_image_size, ratio_calc, sum_calc
+from image_processor import run_processing
+from image_processor import change_image_size, ratio_calc, sum_calc
 from image_format import *
 
 def image_size_locator(start_path):
