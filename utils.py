@@ -24,6 +24,7 @@ def image_size_locator(start_path):
             if is_flip_to_left(source):
                 source = cv2.flip(source, 1)
                 mask = cv2.flip(mask, 1)
+                cv2.imwrite(full_path + "\\" + "mask.png", mask)
                 cv2.imwrite(full_path + "\\" + "source.png", source)
             tagged = cv2.imread(full_path + "\\" + "1-1.png")
 
@@ -51,6 +52,6 @@ def image_resize_by_ratio(start_path, list_new, x_max, y_max):
             change_image_size("final_mask.png", mask, full_path, index, list_new, x_max, y_max)
             draw_roi(full_path, "final_ratio.png", "final_mask.png", "final_roi.png")
 
+
 def calculate_whole_image_size(image_info_lst):
     return sum_calc(image_info_lst)
-
