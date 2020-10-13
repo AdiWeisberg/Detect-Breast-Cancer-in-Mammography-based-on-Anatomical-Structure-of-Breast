@@ -381,7 +381,7 @@ def gradient_compare(poly, nipple_point, flag, isRotated):
                     only_m.append(last_ten[j][0])
                 avg_ten_m = sum(only_m) / n
                 count_signs = sum(1 for c in last_ten if c[0] < 0)  # count 3 minuses or more ---
-                if isRotated == "yes":
+                if isRotated:
                     index_m = np.argmin(only_m)
                 else:
                     index_m = np.argmax(only_m)
@@ -437,7 +437,6 @@ def ratio_calc(list_of_wh):
     widths = 0
     lengths = 0
     sum = 0
-
     for i in list_of_wh:
         w, h, size = i
         widths += w
@@ -516,7 +515,7 @@ def draw_roi(full_path,p_image,p_mask, new_name):
 def run_processing(source, tagged, path, mask):
     draw_roi(path, "source.png", "mask.png", "before_roi.png")
     h, w = tagged.shape[:2]
-    isRotated = "no"
+    isRotated = False
     # Find line of muscle and nipple
     top_point, buttom_point = find_borders.findLine(tagged)
 
@@ -529,7 +528,7 @@ def run_processing(source, tagged, path, mask):
         source = remove_white_frame_norotate(source, top_point, buttom_point)
 
     if angle < 90:
-        isRotated = "yes"
+        isRotated = True
         # Delete white frame
         source = remove_white_frame(source, top_point)
 
@@ -548,6 +547,9 @@ def run_processing(source, tagged, path, mask):
     poly_top, poly_bottom, top_muscle, bottom_muscle = ransac_polyfit(countors, nipple_point, h, w, source, isRotated)
     x1, y_bottom = bottom_muscle
     x2, y_top = top_muscle
+    if not isRotated:
+        _,y_top = top_point
+        _,y_bottom = buttom_point
 
     # calculate new length of muscle:
     length_breast = Finding_Length(top_muscle, bottom_muscle)
