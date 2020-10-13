@@ -20,9 +20,10 @@ def image_size_locator(start_path):
             dcm_to_png(full_path)
             source = cv2.imread(full_path + "\\" + "source.png")
 
-            # flip the image so that the brest will be in the left side if needed
+            # flip the image and the mask so that the brest will be in the left side if needed
             if is_flip_to_left(source):
                 source = cv2.flip(source, 1)
+                mask = cv2.flip(source, 1)
                 cv2.imwrite(full_path + "\\" + "source.png", source)
             tagged = cv2.imread(full_path + "\\" + "1-1.png")
 
